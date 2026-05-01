@@ -33,7 +33,8 @@ Create `.env` (copy from `.env.example`) and restart the dev server.
 1. In `CleanLiving`: `npx eas-cli login` (or global `eas-cli`). Run `npx eas-cli build:configure` once if the project is not linked.
 2. `expo.extra.privacyPolicyUrl` in `app.json` must match your **live** policy page (see repo root `privacy.html` + GitHub Pages).
 3. Production build: `npm run eas:ios` (or `npx eas-cli build --platform ios --profile production`). Internal/TestFlight-style: `npm run eas:ios:preview`.
-4. Draft App Store copy: `docs/app-store-listing.txt`.
+4. After a good TestFlight build: `npm run eas:submit` submits the latest iOS build to App Store Connect (configure Apple credentials when prompted).
+5. Draft App Store copy: `docs/app-store-listing.txt`.
 
 `ios.bundleIdentifier` is set to `com.cleanliving.app` in `app.json` (change if you need a unique id).
 

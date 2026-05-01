@@ -8,7 +8,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "eas:ios": "npx eas-cli build --platform ios --profile production",
-    "eas:ios:preview": "npx eas-cli build --platform ios --profile preview"
+    "eas:ios:preview": "npx eas-cli build --platform ios --profile preview",
+    "eas:submit": "npx eas-cli submit --platform ios --latest"
   },
   "dependencies": {
     "@react-navigation/native": "^7.2.2",

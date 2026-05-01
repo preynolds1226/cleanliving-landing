@@ -27,8 +27,9 @@ yarn-error.*
 CleanLiving/ios/
 CleanLiving/android/
 
-# Vercel (cleanliving-api)
+# Vercel / stray Expo (cleanliving-api)
 .vercel
+cleanliving-api/.expo/
 .env.vercel*
 .env.production.vercel
 

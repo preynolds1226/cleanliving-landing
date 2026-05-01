@@ -1,4 +1,5 @@
 .vercel
+.expo/
 .env*.local
 .env.vercel*
 .env.production.vercel

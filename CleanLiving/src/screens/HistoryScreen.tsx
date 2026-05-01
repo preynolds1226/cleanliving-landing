@@ -4,6 +4,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import { getHouseScoreAverage, listScansDescending, type ScanRow } from '../db/scansDb';
 import { getEffectiveSwapUrl } from '../services/affiliateLinks';
+import { PrivacyPolicyFooter } from '../components/PrivacyPolicyFooter';
 import { openExternalUrl } from '../utils/openExternalUrl';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'History'>;
@@ -101,6 +102,7 @@ export function HistoryScreen({ navigation }: Props) {
               </Pressable>
             ))
           )}
+          <PrivacyPolicyFooter />
         </ScrollView>
       )}
     </View>

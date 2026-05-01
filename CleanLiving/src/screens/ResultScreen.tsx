@@ -4,6 +4,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { ScanResult } from '../types';
 import { ScanResultPanel } from '../components/ScanResultPanel';
 import { getScanById } from '../db/scansDb';
+import { PrivacyPolicyFooter } from '../components/PrivacyPolicyFooter';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Result'>;
@@ -59,6 +60,7 @@ export function ResultScreen({ navigation, route }: Props) {
       <View style={styles.centered}>
         <ActivityIndicator size="large" />
         <Text style={styles.loadingText}>Loading result…</Text>
+        <PrivacyPolicyFooter />
       </View>
     );
   }
@@ -73,6 +75,7 @@ export function ResultScreen({ navigation, route }: Props) {
         <Pressable style={styles.link} onPress={onScanAgain}>
           <Text style={styles.linkText}>Scan again</Text>
         </Pressable>
+        <PrivacyPolicyFooter />
       </View>
     );
   }

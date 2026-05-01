@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { HormoneInfo, IngredientItem, ScanResult } from '../types';
+import { PrivacyPolicyFooter } from './PrivacyPolicyFooter';
 import { getEffectiveSwapUrl } from '../services/affiliateLinks';
 import { openExternalUrl } from '../utils/openExternalUrl';
 
@@ -117,6 +118,8 @@ export function ScanResultPanel({
         <Pressable style={styles.secondaryBtn} onPress={onScanAgain}>
           <Text style={styles.secondaryBtnText}>Scan another product</Text>
         </Pressable>
+
+        <PrivacyPolicyFooter />
       </ScrollView>
 
       <Modal visible={!!hormoneDetail} transparent animationType="fade">
