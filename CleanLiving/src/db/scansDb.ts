@@ -33,6 +33,12 @@ async function migrate(db: SQLite.SQLiteDatabase): Promise<void> {
   if (!hasFavorite) {
     await db.execAsync(`ALTER TABLE scans ADD COLUMN is_favorite INTEGER NOT NULL DEFAULT 0`);
   }
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS explore_saved (
+      pick_id TEXT PRIMARY KEY NOT NULL,
+      saved_at INTEGER NOT NULL
+    );
+  `);
 }
 
 async function getDb(): Promise<SQLite.SQLiteDatabase> {
@@ -172,4 +178,26 @@ export async function exportAllScansJson(): Promise<string> {
     result: r.result,
   }));
   return JSON.stringify(payload, null, 2);
+}
+
+/** Saved Explore picks (affiliate idea shelf), newest first */
+export async function getExploreSavedPickIds(): Promise<string[]> {
+  const db = await getDb();
+  const rows = await db.getAllAsync<{ pick_id: string }>(
+    `SELECT pick_id FROM explore_saved ORDER BY saved_at DESC`
+  );
+  return rows.map((r) => r.pick_id);
+}
+
+export async function saveExplorePick(pickId: string): Promise<void> {
+  const db = await getDb();
+  await db.runAsync(`INSERT OR REPLACE INTO explore_saved (pick_id, saved_at) VALUES (?, ?)`, [
+    pickId,
+    Date.now(),
+  ]);
+}
+
+export async function removeExplorePick(pickId: string): Promise<void> {
+  const db = await getDb();
+  await db.runAsync(`DELETE FROM explore_saved WHERE pick_id = ?`, [pickId]);
 }
