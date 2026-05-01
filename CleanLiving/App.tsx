@@ -12,6 +12,7 @@ import { ResultScreen } from './src/screens/ResultScreen';
 import { HistoryScreen } from './src/screens/HistoryScreen';
 import { CompareScreen } from './src/screens/CompareScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
+import { ExploreScreen } from './src/screens/ExploreScreen';
 import type { RootStackParamList } from './src/navigation/types';
 import { hasCompletedOnboarding } from './src/utils/onboardingStorage';
 
@@ -50,6 +51,7 @@ export default function App() {
             <Stack.Screen name="History" component={HistoryScreen} />
             <Stack.Screen name="Compare" component={CompareScreen} />
             <Stack.Screen name="Settings" component={SettingsScreen} />
+            <Stack.Screen name="Explore" component={ExploreScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </SafeAreaProvider>

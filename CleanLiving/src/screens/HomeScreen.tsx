@@ -149,6 +149,18 @@ export function HomeScreen({ navigation }: Props) {
               <Text style={[styles.actionText, { color: colors.text }]}>Refresh</Text>
             </Pressable>
           </View>
+
+          <Pressable
+            style={[styles.exploreBtn, { borderColor: colors.accent, backgroundColor: colors.accentSoft }]}
+            onPress={() => navigation.navigate('Explore')}
+          >
+            <Text style={[styles.exploreBtnText, { color: colors.accent }]}>
+              Explore clean picks — affiliate ideas
+            </Text>
+            <Text style={[styles.exploreBtnSub, { color: colors.textMuted }]}>
+              Scroll curated swaps without scanning
+            </Text>
+          </Pressable>
         </View>
 
         <View style={styles.sectionHeader}>
@@ -248,6 +260,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   actionText: { fontSize: 14, fontWeight: '800' },
+  exploreBtn: {
+    marginTop: 4,
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    gap: 4,
+  },
+  exploreBtnText: { fontSize: 15, fontWeight: '900', textAlign: 'center' },
+  exploreBtnSub: { fontSize: 12, textAlign: 'center' },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   sectionTitle: { fontSize: 16, fontWeight: '900' },
   sectionLink: { fontSize: 14, fontWeight: '800' },

@@ -6,4 +6,5 @@ export type RootStackParamList = {
   History: undefined;
   Compare: { scanIdA: string; scanIdB: string };
   Settings: undefined;
+  Explore: undefined;
 };

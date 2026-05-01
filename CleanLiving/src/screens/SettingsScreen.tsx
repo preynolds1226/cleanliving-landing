@@ -89,6 +89,16 @@ export function SettingsScreen({ navigation }: Props) {
 
         <Pressable
           style={[styles.rowBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          onPress={() => navigation.navigate('Explore')}
+        >
+          <Text style={[styles.rowBtnText, { color: colors.text }]}>Explore clean picks</Text>
+          <Text style={[styles.rowHint, { color: colors.textMuted }]}>
+            Curated affiliate shopping ideas
+          </Text>
+        </Pressable>
+
+        <Pressable
+          style={[styles.rowBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
           onPress={() => void Linking.openSettings()}
         >
           <Text style={[styles.rowBtnText, { color: colors.text }]}>System settings</Text>
