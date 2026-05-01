@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -16,23 +16,15 @@ import { analyzeLabelFromBase64, getMockScanResult } from '../services/analyzeLa
 import { withEffectiveAffiliate } from '../services/affiliateLinks';
 import { insertScan } from '../db/scansDb';
 import type { ScanScreenProps } from '../navigation/types';
+import { friendlyScanError } from '../utils/friendlyScanError';
+import {
+  clearPendingScanBase64,
+  getPendingScanBase64,
+  savePendingScanBase64,
+  type PendingScanPayload,
+} from '../utils/pendingScanStorage';
 
 type Props = ScanScreenProps;
-
-function friendlyScanError(message: string): string {
-  const m = message.toLowerCase();
-  if (m.includes('network') || m.includes('fetch') || m.includes('failed to fetch'))
-    return 'We couldn’t reach the analysis service. Check your connection and try again.';
-  if (m.includes('timeout') || m.includes('timed out'))
-    return 'The analysis took too long. Try again in a moment.';
-  if (m.includes('401') || m.includes('403') || m.includes('unauthorized'))
-    return 'Analysis isn’t authorized. Ask the person who set up the app to check API keys or the proxy.';
-  if (m.includes('500') || m.includes('502') || m.includes('503'))
-    return 'The analysis service had a temporary problem. Try again shortly.';
-  if (m.includes('could not read image') || m.includes('capture failed'))
-    return 'The camera didn’t return a usable photo. Try again with steadier lighting.';
-  return message.length > 160 ? `${message.slice(0, 157)}…` : message;
-}
 
 const ANALYZE_API_URL = process.env.EXPO_PUBLIC_ANALYZE_API_URL;
 const ANALYZE_SECRET = process.env.EXPO_PUBLIC_ANALYZE_SECRET;
@@ -60,6 +52,14 @@ export function ScanScreen({ navigation }: Props) {
   const [scanMode, setScanMode] = useState<ScanMode>('label');
   const lastBase64Ref = useRef<string | null>(null);
   const lastBarcodeAt = useRef(0);
+  const [pendingFromStorage, setPendingFromStorage] = useState<PendingScanPayload | null>(null);
+
+  useEffect(() => {
+    void (async () => {
+      const p = await getPendingScanBase64();
+      if (p) setPendingFromStorage(p);
+    })();
+  }, []);
 
   const runAnalyze = useCallback(
     async (base64: string | null) => {
@@ -77,16 +77,31 @@ export function ScanScreen({ navigation }: Props) {
         const result = withEffectiveAffiliate(raw);
         const scanId = await insertScan(result);
         lastBase64Ref.current = null;
+        await clearPendingScanBase64();
+        setPendingFromStorage(null);
         navigation.navigate('Result', { scanId });
       } catch (e) {
         const raw = e instanceof Error ? e.message : 'Something went wrong';
         setError(friendlyScanError(raw));
+        if (base64) void savePendingScanBase64(base64);
       } finally {
         setPhase('scan');
       }
     },
     [navigation]
   );
+
+  const onDismissPending = useCallback(() => {
+    void clearPendingScanBase64();
+    setPendingFromStorage(null);
+    lastBase64Ref.current = null;
+  }, []);
+
+  const onRetryPending = useCallback(() => {
+    if (!pendingFromStorage) return;
+    lastBase64Ref.current = pendingFromStorage.base64;
+    void runAnalyze(pendingFromStorage.base64);
+  }, [pendingFromStorage, runAnalyze]);
 
   const capture = useCallback(async () => {
     if (scanMode !== 'label') return;
@@ -256,6 +271,32 @@ export function ScanScreen({ navigation }: Props) {
         </View>
       ) : null}
       <SafeAreaView style={styles.bottomBar} edges={['bottom']}>
+        {pendingFromStorage && phase === 'scan' ? (
+          <View style={styles.pendingBanner}>
+            <Text style={styles.pendingText}>
+              A label photo wasn’t analyzed yet (network or server issue). Retry with the same photo, or
+              dismiss.
+            </Text>
+            <View style={styles.pendingActions}>
+              <Pressable
+                style={styles.pendingBtn}
+                onPress={() => void onRetryPending()}
+                accessibilityRole="button"
+                accessibilityLabel="Retry analysis with saved photo"
+              >
+                <Text style={styles.pendingBtnText}>Retry saved photo</Text>
+              </Pressable>
+              <Pressable
+                style={styles.pendingBtnSecondary}
+                onPress={onDismissPending}
+                accessibilityRole="button"
+                accessibilityLabel="Dismiss saved photo reminder"
+              >
+                <Text style={styles.pendingBtnSecondaryText}>Dismiss</Text>
+              </Pressable>
+            </View>
+          </View>
+        ) : null}
         {error ? (
           <Text style={styles.errorText} accessibilityLiveRegion="polite">
             {error}
@@ -433,6 +474,36 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   retryText: { color: '#fff', fontWeight: '800', fontSize: 15 },
+  pendingBanner: {
+    marginHorizontal: 16,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: 'rgba(30,41,59,0.92)',
+    gap: 10,
+    maxWidth: '100%',
+  },
+  pendingText: {
+    color: 'rgba(255,255,255,0.92)',
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: 'center',
+  },
+  pendingActions: { flexDirection: 'row', justifyContent: 'center', gap: 10, flexWrap: 'wrap' },
+  pendingBtn: {
+    backgroundColor: 'rgba(124,255,178,0.35)',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+  },
+  pendingBtnText: { color: '#fff', fontWeight: '800', fontSize: 14 },
+  pendingBtnSecondary: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
+  },
+  pendingBtnSecondaryText: { color: 'rgba(255,255,255,0.85)', fontWeight: '700', fontSize: 14 },
   permission: {
     flex: 1,
     padding: 24,

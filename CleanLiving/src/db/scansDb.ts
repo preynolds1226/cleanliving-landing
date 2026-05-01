@@ -1,5 +1,9 @@
 import * as SQLite from 'expo-sqlite';
 import type { ScanResult } from '../types';
+import { computeActivityStats, type ActivityStats } from '../utils/activityStatsPure';
+import { buildExportV2Object } from '../utils/exportPayload';
+
+export type { ActivityStats };
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
@@ -16,13 +20,19 @@ type RowRaw = {
   is_favorite?: number;
 };
 
-function mapRow(row: RowRaw): ScanRow {
+function tryMapRow(row: RowRaw): ScanRow | null {
+  let result: ScanResult;
+  try {
+    result = JSON.parse(row.payload) as ScanResult;
+  } catch {
+    return null;
+  }
   return {
     id: row.id,
     createdAt: row.created_at,
     purityScore: row.purity_score,
     productGuess: row.product_guess,
-    result: JSON.parse(row.payload) as ScanResult,
+    result,
     isFavorite: row.is_favorite === 1,
   };
 }
@@ -85,13 +95,13 @@ export async function getScanById(id: string): Promise<ScanRow | null> {
   const db = await getDb();
   const row = await db.getFirstAsync<RowRaw>(`SELECT * FROM scans WHERE id = ?`, [id]);
   if (!row) return null;
-  return mapRow(row);
+  return tryMapRow(row);
 }
 
 export async function listScansDescending(): Promise<ScanRow[]> {
   const db = await getDb();
   const rows = await db.getAllAsync<RowRaw>(`SELECT * FROM scans ORDER BY created_at DESC`);
-  return rows.map(mapRow);
+  return rows.map(tryMapRow).filter((r): r is ScanRow => r != null);
 }
 
 export async function deleteScan(id: string): Promise<void> {
@@ -119,52 +129,9 @@ export async function getHouseScoreAverage(): Promise<number | null> {
   return Math.round(row.avg);
 }
 
-export type ActivityStats = {
-  totalScans: number;
-  weekCount: number;
-  streakDays: number;
-};
-
-function startOfLocalWeek(d: Date): number {
-  const x = new Date(d);
-  const day = x.getDay();
-  x.setDate(x.getDate() - day);
-  x.setHours(0, 0, 0, 0);
-  return x.getTime();
-}
-
-/** Consecutive local days with scans, anchored on the most recent scan day */
-function streakFromRecentDay(sortedDesc: string[]): number {
-  if (sortedDesc.length === 0) return 0;
-  let streak = 1;
-  let prev = new Date(sortedDesc[0] + 'T12:00:00').getTime();
-  for (let i = 1; i < sortedDesc.length; i++) {
-    const t = new Date(sortedDesc[i] + 'T12:00:00').getTime();
-    const dayDiff = (prev - t) / 86400000;
-    if (dayDiff === 1) {
-      streak += 1;
-      prev = t;
-    } else {
-      break;
-    }
-  }
-  return streak;
-}
-
-function localDayKey(ms: number): string {
-  const d = new Date(ms);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
 export async function getActivityStats(): Promise<ActivityStats> {
   const rows = await listScansDescending();
-  const totalScans = rows.length;
-  const weekStart = startOfLocalWeek(new Date());
-  const weekCount = rows.filter((r) => r.createdAt >= weekStart).length;
-  const sortedDesc = [...new Set(rows.map((r) => localDayKey(r.createdAt)))].sort().reverse();
-  const streakDays = streakFromRecentDay(sortedDesc);
-
-  return { totalScans, weekCount, streakDays };
+  return computeActivityStats(rows);
 }
 
 /** Saved Explore picks (affiliate idea shelf), newest first */
@@ -187,16 +154,7 @@ export async function exportAllScansJson(): Promise<string> {
     isFavorite: r.isFavorite,
     result: r.result,
   }));
-  return JSON.stringify(
-    {
-      version: 2,
-      exportedAt: Date.now(),
-      scans,
-      exploreSavedPickIds,
-    },
-    null,
-    2
-  );
+  return JSON.stringify(buildExportV2Object(scans, exploreSavedPickIds, Date.now()), null, 2);
 }
 
 export async function clearAllExploreSaved(): Promise<void> {

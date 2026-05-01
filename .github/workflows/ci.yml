@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+    paths:
+      - 'CleanLiving/**'
+      - '.github/workflows/ci.yml'
+  pull_request:
+    paths:
+      - 'CleanLiving/**'
+      - '.github/workflows/ci.yml'
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: CleanLiving
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: CleanLiving/package-lock.json
+      - run: npm ci
+      - run: npm run verify

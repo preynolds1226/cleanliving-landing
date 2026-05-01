@@ -7,9 +7,17 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
+    "typecheck": "tsc --noEmit",
+    "lint": "expo lint",
+    "test": "jest",
+    "verify": "npm run typecheck && npm run test && npm run lint",
+    "postinstall": "simple-git-hooks",
     "eas:ios": "npx eas-cli build --platform ios --profile production",
     "eas:ios:preview": "npx eas-cli build --platform ios --profile preview",
     "eas:submit": "npx eas-cli submit --platform ios --latest"
+  },
+  "simple-git-hooks": {
+    "pre-push": "npm run verify"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
@@ -37,7 +45,13 @@
     "react-native-web": "^0.21.0"
   },
   "devDependencies": {
+    "@types/jest": "^30.0.0",
     "@types/react": "~19.1.0",
+    "eslint": "^9.39.4",
+    "eslint-config-expo": "^55.0.0",
+    "jest": "^29.7.0",
+    "jest-expo": "~54.0.0",
+    "simple-git-hooks": "^2.13.1",
     "typescript": "~5.9.2"
   },
   "private": true

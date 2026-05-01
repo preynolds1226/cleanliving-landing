@@ -22,6 +22,7 @@ import {
   saveExplorePick,
 } from '../db/scansDb';
 import { getAffiliateSwapForCategory } from '../services/affiliateLinks';
+import { filterExplorePicks } from '../utils/exploreFilter';
 import { openExternalUrl } from '../utils/openExternalUrl';
 import { useAppColors, type AppColors } from '../theme/colors';
 
@@ -160,25 +161,18 @@ export function ExploreScreen({ navigation }: Props) {
 
   const savedSet = useMemo(() => new Set(savedOrder), [savedOrder]);
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    let list = EXPLORE_PICKS;
-    if (tab === 'saved') {
-      const rank = new Map(savedOrder.map((id, i) => [id, i]));
-      list = EXPLORE_PICKS.filter((p) => savedSet.has(p.id)).sort(
-        (a, b) => (rank.get(a.id) ?? 999) - (rank.get(b.id) ?? 999)
-      );
-    }
-    if (categoryFilter !== null) {
-      list = list.filter((p) => p.category === categoryFilter);
-    }
-    if (!q) return list;
-    return list.filter(
-      (p) =>
-        p.title.toLowerCase().includes(q) ||
-        p.subtitle.toLowerCase().includes(q)
-    );
-  }, [query, tab, savedSet, savedOrder, categoryFilter]);
+  const filtered = useMemo(
+    () =>
+      filterExplorePicks({
+        allPicks: EXPLORE_PICKS,
+        query,
+        tab,
+        savedOrder,
+        savedSet,
+        categoryFilter,
+      }),
+    [query, tab, savedSet, savedOrder, categoryFilter]
+  );
 
   const emptyMessage = useMemo(() => {
     if (tab === 'saved' && savedOrder.length === 0) {

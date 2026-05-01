@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { AppErrorBoundary } from './src/components/AppErrorBoundary';
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
 import { ResultScreen } from './src/screens/ResultScreen';
 import { CompareScreen } from './src/screens/CompareScreen';
@@ -28,7 +29,7 @@ function AppStack() {
   );
 }
 
-export default function App() {
+function AppContent() {
   const [bootReady, setBootReady] = useState(false);
   const [initialRoute, setInitialRoute] = useState<keyof RootStackParamList | null>(null);
 
@@ -60,5 +61,14 @@ export default function App() {
         </NavigationContainer>
       </SafeAreaProvider>
     </GestureHandlerRootView>
+  );
+}
+
+export default function App() {
+  const [boundaryKey, setBoundaryKey] = useState(0);
+  return (
+    <AppErrorBoundary key={boundaryKey} onHardReset={() => setBoundaryKey((k) => k + 1)}>
+      <AppContent />
+    </AppErrorBoundary>
   );
 }
