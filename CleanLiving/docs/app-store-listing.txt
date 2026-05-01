@@ -1,0 +1,31 @@
+CleanLiving — App Store metadata (draft)
+
+--- Subtitle (30 chars max) ---
+Scan labels. Swap cleaner.
+
+--- Promotional text (170 chars max) ---
+Live-scan ingredient labels, see flagged ingredients and a purity score, and open vetted swap links. Track scans in My Home and watch your house score improve over time.
+
+--- Description (first screen) ---
+CleanLiving helps you read product labels like a pro.
+
+• Live Vision — align the ingredient panel with an on-screen frame
+• Toxic highlights — “caution” and “avoid” ingredients called out clearly
+• Hormone notes — short explainers when an endocrine concern shows up
+• Purity score — 1–100 snapshot to compare products fast
+• Clean swaps — one tap to curated alternatives (Amazon and optional Impact partners)
+• My Home — local history and average “house score” across your scans
+
+Affiliate disclosure: some links may earn us a commission at no extra cost to you.
+
+--- Keywords (100 chars max, comma-separated) ---
+clean living,toxins,ingredients,scanner,organic,paraben,fragrance,label,wellness,non toxic
+
+--- Support URL ---
+https://YOUR_SUPPORT_OR_LANDING_PAGE
+
+--- Marketing URL (optional) ---
+https://YOUR_MARKETING_SITE
+
+--- Privacy Policy URL ---
+Must match a public page (see app.json extra.privacyPolicyUrl).

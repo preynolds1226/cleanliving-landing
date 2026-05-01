@@ -1,0 +1,50 @@
+{
+  "expo": {
+    "name": "CleanLiving",
+    "slug": "CleanLiving",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.cleanliving.app",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSCameraUsageDescription": "CleanLiving uses the camera to scan ingredient labels in real time.",
+        "NSPhotoLibraryAddUsageDescription": "CleanLiving can optionally save a scan image to your Photos when you choose to."
+      }
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow CleanLiving to scan product labels with your camera."
+        }
+      ],
+      "expo-sqlite",
+      "expo-web-browser"
+    ],
+    "extra": {
+      "privacyPolicyUrl": "https://YOUR_GITHUB_USERNAME.github.io/cleanliving-landing/privacy.html"
+    },
+    "android": {
+      "package": "com.cleanliving.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}
