@@ -46,9 +46,12 @@ function PurityGauge({ score, c }: { score: number; c: AppColors }) {
 export function ScanResultPanel({
   result,
   onScanAgain,
+  onCompare,
 }: {
   result: ScanResult;
   onScanAgain: () => void;
+  /** When set, shows “Compare with another scan” (saved results only). */
+  onCompare?: () => void;
 }) {
   const c = useAppColors();
   const dark = useColorScheme() === 'dark';
@@ -95,6 +98,17 @@ export function ScanResultPanel({
             <Text style={[styles.shareBtnText, { color: c.text }]}>Share summary</Text>
           </Pressable>
         </View>
+
+        {onCompare ? (
+          <Pressable
+            style={[styles.compareBtn, { borderColor: c.border, backgroundColor: c.surface }]}
+            onPress={onCompare}
+            accessibilityRole="button"
+            accessibilityLabel="Compare with another scan"
+          >
+            <Text style={[styles.compareBtnText, { color: c.text }]}>Compare with another scan</Text>
+          </Pressable>
+        ) : null}
 
         <Pressable
           onPress={() => setScoreDetailOpen((v) => !v)}
@@ -186,8 +200,8 @@ export function ScanResultPanel({
           </Pressable>
           <Text style={[styles.affiliateDisclaimer, { color: c.textMuted }]}>
             {result.cleanSwap.partner === 'impact'
-              ? 'Partner link (Impact). If you buy through it, we may earn a commission at no extra cost to you.'
-              : 'Affiliate link — if you buy through it, we may earn a commission at no extra cost to you.'}
+              ? 'Partner link (Impact). Qualifying purchases may earn us a commission at no extra cost to you. We do not receive your payment details. Always verify the seller and product page before buying.'
+              : 'Amazon search / affiliate link. Qualifying purchases may earn us a commission at no extra cost to you. Prices and availability change; we do not receive your payment details. See our Privacy Policy for how we handle data.'}
           </Text>
         </View>
 
@@ -236,6 +250,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   shareBtnText: { fontSize: 14, fontWeight: '800' },
+  compareBtn: {
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    marginBottom: 16,
+  },
+  compareBtnText: { fontSize: 14, fontWeight: '800' },
   title: {
     fontSize: 22,
     fontWeight: '700',

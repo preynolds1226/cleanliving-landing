@@ -1,0 +1,7 @@
+# Smoke: launch and reach main tabs (adjust appId for your build).
+appId: com.cleanliving.app
+---
+- launchApp
+- assertVisible: "Home"
+- tapOn: "Scan"
+- assertVisible: "CleanLiving"

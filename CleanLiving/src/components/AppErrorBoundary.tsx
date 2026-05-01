@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Sentry } from '../instrumentation/sentry';
 
 type Props = { children: ReactNode; onHardReset: () => void };
 
@@ -12,8 +13,10 @@ export class AppErrorBoundary extends Component<Props, State> {
     return { error };
   }
 
-  componentDidCatch(_error: Error, _info: ErrorInfo) {
-    // Hook for future crash reporting
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    if (process.env.EXPO_PUBLIC_SENTRY_DSN?.trim()) {
+      Sentry.captureException(error, { extra: { componentStack: info.componentStack } });
+    }
   }
 
   render() {

@@ -17,6 +17,8 @@ export type ExplorePick = {
   title: string;
   subtitle: string;
   category: SwapCategory;
+  /** Editorial stock photo illustrating the category (not a specific SKU). */
+  imageUrl: string;
 };
 
 const ROTATION: SwapCategory[] = [
@@ -29,12 +31,71 @@ const ROTATION: SwapCategory[] = [
   'naturalFiberClothing',
 ];
 
-type Seed = { title: string; subtitle: string };
+type Seed = {
+  title: string;
+  subtitle: string;
+  /** Optional hero image (your URL). Falls back to category stock rotation when omitted. */
+  imageUrl?: string;
+};
+
+/**
+ * Unsplash images (illustrative only). License: https://unsplash.com/license
+ * Rotated per pick so cards feel varied without implying a specific listing.
+ */
+const CATEGORY_IMAGES: Record<SwapCategory, string[]> = {
+  stainlessBottle: [
+    'https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=320&h=320&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1570960910233-906bcda8d73c?w=320&h=320&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1523362628745-0c801154bfa6?w=320&h=320&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1625705686274-136e3d9e704b?w=320&h=320&fit=crop&q=80',
+  ],
+  glassBottle: [
+    'https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=320&h=320&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=320&h=320&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=320&h=320&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1523362628745-0c801154bfa6?w=320&h=320&fit=crop&q=80',
+  ],
+  castileSoap: [
+    'https://images.unsplash.com/photo-1584305574648-04a57a70636a?w=320&h=320&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1556228578-0d85b1a4d571?w=320&h=320&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1600857544200-b2f666a9a2ec?w=320&h=320&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1617897903246-719242758050?w=320&h=320&fit=crop&q=80',
+  ],
+  fragranceFreePersonalCare: [
+    'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=320&h=320&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1570194065650-d99fb4b38b15?w=320&h=320&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=320&h=320&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1596755094514-f87d340867b2?w=320&h=320&fit=crop&q=80',
+  ],
+  organicSnack: [
+    'https://images.unsplash.com/photo-1490818387583-1baba5e638af?w=320&h=320&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=320&h=320&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1494390248081-4e521a5940db?w=320&h=320&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1505253758473-96b701d2d578?w=320&h=320&fit=crop&q=80',
+  ],
+  bpaFreeStorage: [
+    'https://images.unsplash.com/photo-1584990347449-a8b2917bcfc0?w=320&h=320&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1610557892470-b2961e8c1980?w=320&h=320&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1606787366850-de633012d1b0?w=320&h=320&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1556911220-bff31c812dba?w=320&h=320&fit=crop&q=80',
+  ],
+  naturalFiberClothing: [
+    'https://images.unsplash.com/photo-1523381210438-271e8be1f52b?w=320&h=320&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1445205170230-053b83016050?w=320&h=320&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1434389677669-e08b4cac3105?w=320&h=320&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=320&h=320&fit=crop&q=80',
+  ],
+};
 
 /** ≥15 rows each so round-robin to 100 stays unique enough (floor(i/7) < 15). */
 const SEEDS: Record<SwapCategory, Seed[]> = {
   stainlessBottle: [
-    { title: 'Narrow-mouth insulated bottle', subtitle: 'Slim profile for cup holders; skip disposable plastic on commutes.' },
+    {
+      title: 'Narrow-mouth insulated bottle',
+      subtitle: 'Slim profile for cup holders; skip disposable plastic on commutes.',
+      imageUrl:
+        'https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=320&h=320&fit=crop&q=80',
+    },
     { title: 'Wide-mouth 32 oz steel bottle', subtitle: 'Easy ice and cleaning; double-wall keeps drinks cold for hours.' },
     { title: 'Straw-lid hydration bottle', subtitle: 'Sip without unscrewing — handy for workouts and car trips.' },
     { title: 'Powder-coated steel growler', subtitle: 'Durable finish; refill instead of buying bottled water by the case.' },
@@ -102,7 +163,12 @@ const SEEDS: Record<SwapCategory, Seed[]> = {
     { title: 'Fragrance-free oil cleanser', subtitle: 'First step in double-cleanse routines for sunscreen removal.' },
   ],
   organicSnack: [
-    { title: 'Organic fruit strips', subtitle: 'Lunchbox swap vs candy with long dye lists.' },
+    {
+      title: 'Organic fruit strips',
+      subtitle: 'Lunchbox swap vs candy with long dye lists.',
+      imageUrl:
+        'https://images.unsplash.com/photo-1490818387583-1baba5e638af?w=320&h=320&fit=crop&q=80',
+    },
     { title: 'Organic seed crackers', subtitle: 'Pair with hummus for a fiber-forward snack.' },
     { title: 'Organic applesauce pouches', subtitle: 'Convenient; recycle or terracycle programs where available.' },
     { title: 'Organic granola bars', subtitle: 'Compare added sugar — “organic” isn’t automatically low sugar.' },
@@ -160,11 +226,15 @@ function buildExplorePicks(): ExplorePick[] {
     const category = ROTATION[i % ROTATION.length];
     const pool = SEEDS[category];
     const seed = pool[Math.floor(i / ROTATION.length) % pool.length];
+    const imgs = CATEGORY_IMAGES[category];
+    const imageUrl =
+      seed.imageUrl ?? imgs[Math.floor(i / ROTATION.length) % imgs.length];
     picks.push({
       id: `exp_${i}`,
       title: seed.title,
       subtitle: seed.subtitle,
       category,
+      imageUrl,
     });
   }
   return picks;

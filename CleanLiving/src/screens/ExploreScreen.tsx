@@ -4,11 +4,13 @@ import {
   ListRenderItem,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useFocusEffect } from '@react-navigation/native';
 import type { ExplorePick } from '../data/explorePicks';
 import { EXPLORE_CATEGORY_OPTIONS, EXPLORE_PICKS } from '../data/explorePicks';
@@ -52,7 +54,10 @@ const ExploreListHeader = memo(function ExploreListHeader({
   return (
     <View style={styles.headerBlock}>
       <Text style={[styles.lede, { color: colors.textSecondary }]}>
-        100 curated directions for a cleaner routine. Tap ☆ to save for later. Shopping links may be{' '}
+        100 editorial ideas for a cleaner routine — not medical advice. Photos are stock illustrations and
+        may not match what you see after you tap through. We may earn a commission on qualifying purchases
+        through shopping links at no extra cost to you; we do not receive your payment details. Always
+        verify ingredients, seller, and price on the retailer’s page. Tap ☆ to save for later. Links may be{' '}
         <Text style={{ fontWeight: '800', color: colors.text }}>affiliate links</Text>.
       </Text>
 
@@ -209,6 +214,15 @@ export function ExploreScreen({ navigation }: Props) {
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
           <View style={styles.cardTopRow}>
+            <Image
+              source={{ uri: pick.imageUrl }}
+              style={[styles.cardThumb, { backgroundColor: colors.surface2 }]}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+              transition={200}
+              accessibilityRole="image"
+              accessibilityLabel={`Illustration for ${pick.title}`}
+            />
             <View style={styles.cardTextBlock}>
               <Text style={[styles.cardTitle, { color: colors.text }]}>{pick.title}</Text>
               <Text style={[styles.cardSub, { color: colors.textSecondary }]}>{pick.subtitle}</Text>
@@ -230,14 +244,29 @@ export function ExploreScreen({ navigation }: Props) {
             <Text style={[styles.partner, { color: colors.textMuted }]}>
               {swap.partner === 'impact' ? 'Partner (Impact)' : 'Amazon search'}
             </Text>
-            <Pressable
-              style={[styles.cta, { backgroundColor: colors.inverseBg }]}
-              onPress={() => void openExternalUrl(swap.affiliateUrl)}
-              accessibilityRole="button"
-              accessibilityLabel={`Browse affiliate ideas for ${pick.title}`}
-            >
-              <Text style={[styles.ctaText, { color: colors.inverseText }]}>Browse</Text>
-            </Pressable>
+            <View style={styles.cardActions}>
+              <Pressable
+                style={[styles.ctaSecondary, { borderColor: colors.border }]}
+                onPress={() =>
+                  void Share.share({
+                    message: `${pick.title}\n\n${pick.subtitle}\n\n${swap.affiliateUrl}`,
+                    title: pick.title,
+                  })
+                }
+                accessibilityRole="button"
+                accessibilityLabel={`Share idea ${pick.title}`}
+              >
+                <Text style={[styles.ctaSecondaryText, { color: colors.text }]}>Share</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.cta, { backgroundColor: colors.inverseBg }]}
+                onPress={() => void openExternalUrl(swap.affiliateUrl)}
+                accessibilityRole="button"
+                accessibilityLabel={`Browse affiliate ideas for ${pick.title}`}
+              >
+                <Text style={[styles.ctaText, { color: colors.inverseText }]}>Browse</Text>
+              </Pressable>
+            </View>
           </View>
         </View>
       );
@@ -250,8 +279,10 @@ export function ExploreScreen({ navigation }: Props) {
       <View style={styles.footerBlock}>
         <View style={[styles.disclosure, { backgroundColor: colors.surface2, borderColor: colors.border }]}>
           <Text style={[styles.disclosureText, { color: colors.textSecondary }]}>
-            Editorial suggestions only — verify ingredients and sellers. Links use your Amazon Associates tag
-            and optional Impact URLs from env.
+            FTC / endorsement: We may be compensated when you use our links; opinions are editorial. Amazon
+            Associates and other programs have their own terms — comply with their latest Operating Agreement.
+            Not medical or environmental advice. Privacy Policy linked below applies to app data; retailer
+            sites have separate policies.
           </Text>
         </View>
         <PrivacyPolicyFooter />
@@ -326,8 +357,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: 8,
   },
-  cardTopRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
-  cardTextBlock: { flex: 1, gap: 6 },
+  cardTopRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
+  cardThumb: {
+    width: 76,
+    height: 76,
+    borderRadius: 12,
+  },
+  cardTextBlock: { flex: 1, gap: 6, minWidth: 0 },
   saveBtn: { paddingTop: 2 },
   saveIcon: { fontSize: 26, color: '#EAB308' },
   cardTitle: { fontSize: 17, fontWeight: '900' },
@@ -339,8 +375,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: 6,
     gap: 12,
+    flexWrap: 'wrap',
   },
-  partner: { fontSize: 12, fontWeight: '700', flex: 1 },
+  partner: { fontSize: 12, fontWeight: '700', flex: 1, minWidth: 120 },
+  cardActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  ctaSecondary: {
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+  },
+  ctaSecondaryText: { fontSize: 14, fontWeight: '800' },
   cta: { borderRadius: 12, paddingVertical: 10, paddingHorizontal: 14 },
   ctaText: { fontSize: 14, fontWeight: '900' },
   footerBlock: { paddingTop: 8, gap: 8 },

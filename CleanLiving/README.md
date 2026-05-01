@@ -1,54 +1,39 @@
-# CleanLiving (Expo / React Native)
+# CleanLiving (Expo)
 
-CleanLiving is an iOS-first “Live Vision” scanner prototype:
+Scan ingredient labels, view scores and swaps, explore curated picks. Data stays on-device unless you export or use network analysis (see Privacy Policy).
 
-- Live camera framing overlay for ingredient labels
-- AI analysis (via secure proxy) that highlights flagged ingredients
-- Hormone-impact explanations
-- Purity score gauge
-- One-tap clean swap (affiliate-ready)
-- “My Home” History + House score (local SQLite)
+## Prerequisites
 
-## Run locally
+- **Node.js 20 LTS** is recommended for Metro and tooling. Newer Node versions may hit file-watcher quirks on Windows.
+- npm (ships with Node).
+
+## Setup
 
 ```bash
 cd CleanLiving
-npx expo start
+npm ci
 ```
 
-Use Expo Go on a physical iPhone for camera.
+Optional: set `EXPO_PUBLIC_SENTRY_DSN` in `.env` (or EAS secrets) so production builds report crashes to Sentry. Without it, the app runs normally and Sentry stays disabled.
 
-## Environment variables
+## Scripts
 
-Create `.env` (copy from `.env.example`) and restart the dev server.
+| Command        | Description                          |
+|----------------|--------------------------------------|
+| `npm start`    | Expo dev server                      |
+| `npm run typecheck` | `tsc --noEmit`                 |
+| `npm test`     | Jest                                 |
+| `npm run lint` | ESLint (Expo config)                 |
+| `npm run verify` | typecheck + test + lint          |
 
-- `EXPO_PUBLIC_ANALYZE_API_URL`: Your HTTPS proxy endpoint (recommended for any real testing).
-- `EXPO_PUBLIC_ANALYZE_SECRET`: Optional shared secret header for the proxy.
-- `EXPO_PUBLIC_OPENAI_API_KEY`: Dev-only fallback (avoid shipping with this set).
-- `EXPO_PUBLIC_AMAZON_ASSOCIATE_TAG`: Optional Amazon Associates tag appended to curated links.
-- `EXPO_PUBLIC_IMPACT_URL_*`: Optional Impact (or other) tracking URLs — see `.env.example`. When set for a category bucket, swaps use Impact instead of Amazon for that bucket.
+Pre-push (via `simple-git-hooks`): runs `npm run verify`.
 
-## EAS / App Store (iOS)
+## Maestro (optional E2E smoke)
 
-1. In `CleanLiving`: `npx eas-cli login` (or global `eas-cli`). Run `npx eas-cli build:configure` once if the project is not linked.
-2. `expo.extra.privacyPolicyUrl` in `app.json` must match your **live** policy page (see repo root `privacy.html` + GitHub Pages).
-3. Production build: `npm run eas:ios` (or `npx eas-cli build --platform ios --profile production`). Internal/TestFlight-style: `npm run eas:ios:preview`.
-4. After a good TestFlight build: `npm run eas:submit` submits the latest iOS build to App Store Connect (configure Apple credentials when prompted).
-5. Draft App Store copy: `docs/app-store-listing.txt`.
+Install [Maestro](https://maestro.mobile.dev/), start the app in the simulator or on device, then from this folder:
 
-`ios.bundleIdentifier` is set to `com.cleanliving.app` in `app.json` (change if you need a unique id).
+```bash
+maestro test maestro/home.yaml
+```
 
-## Backend proxy (recommended)
-
-This repo includes a minimal Vercel serverless function in `../cleanliving-api/`:
-
-- Endpoint: `POST /api/analyze`
-- Body: `{ "imageBase64": "..." }`
-- Env: `OPENAI_API_KEY` (required), `ANALYZE_SECRET` (optional)
-
-## Privacy notes (high level)
-
-- Camera is used to capture a label image for analysis.
-- When you use the proxy, the label image is sent to your backend which calls the model provider.
-- Scan history is stored locally on-device (SQLite) for the “My Home” audit log.
-
+Adjust `appId` in the flow file if your Android package / iOS bundle id changes.

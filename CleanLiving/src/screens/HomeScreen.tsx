@@ -117,6 +117,24 @@ export function HomeScreen({ navigation }: Props) {
           </View>
         </View>
 
+        {!loading && recent[0] ? (
+          <Pressable
+            style={[styles.latestChip, { backgroundColor: colors.accentSoft, borderColor: colors.accent }]}
+            onPress={() => navigation.navigate('Result', { scanId: recent[0].id })}
+            accessibilityRole="button"
+            accessibilityLabel={`Latest scan: ${recent[0].productGuess}`}
+          >
+            <Text style={[styles.latestChipEyebrow, { color: colors.accent }]}>Latest scan</Text>
+            <View style={styles.latestChipRow}>
+              <Text style={[styles.latestChipTitle, { color: colors.text }]} numberOfLines={1}>
+                {recent[0].productGuess}
+              </Text>
+              <Text style={[styles.latestChipScore, { color: colors.text }]}>{recent[0].purityScore}</Text>
+            </View>
+            <Text style={[styles.latestChipHint, { color: colors.textMuted }]}>Tap to open full result</Text>
+          </Pressable>
+        ) : null}
+
         <View style={[styles.hero, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <View style={styles.scoreBlock}>
             <Text style={[styles.scoreLabel, { color: colors.textMuted }]}>House score</Text>
@@ -238,6 +256,17 @@ const styles = StyleSheet.create({
   statVal: { fontSize: 20, fontWeight: '900' },
   statLbl: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
   statDivider: { width: StyleSheet.hairlineWidth, alignSelf: 'stretch' },
+  latestChip: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 14,
+    gap: 6,
+  },
+  latestChipEyebrow: { fontSize: 11, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.6 },
+  latestChipRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  latestChipTitle: { flex: 1, fontSize: 16, fontWeight: '800' },
+  latestChipScore: { fontSize: 20, fontWeight: '900' },
+  latestChipHint: { fontSize: 12, fontWeight: '600' },
   hero: {
     borderRadius: 18,
     padding: 16,

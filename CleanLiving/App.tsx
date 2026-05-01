@@ -6,6 +6,9 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppErrorBoundary } from './src/components/AppErrorBoundary';
+import { initSentry } from './src/instrumentation/sentry';
+
+initSentry();
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
 import { ResultScreen } from './src/screens/ResultScreen';
 import { CompareScreen } from './src/screens/CompareScreen';
