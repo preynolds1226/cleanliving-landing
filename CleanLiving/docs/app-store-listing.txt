@@ -22,10 +22,11 @@ Affiliate disclosure: some links may earn us a commission at no extra cost to yo
 clean living,toxins,ingredients,scanner,organic,paraben,fragrance,label,wellness,non toxic
 
 --- Support URL ---
-https://YOUR_SUPPORT_OR_LANDING_PAGE
+https://preynolds1226.github.io/cleanliving-landing/
 
 --- Marketing URL (optional) ---
-https://YOUR_MARKETING_SITE
+https://preynolds1226.github.io/cleanliving-landing/
 
 --- Privacy Policy URL ---
-Must match a public page (see app.json extra.privacyPolicyUrl).
+https://preynolds1226.github.io/cleanliving-landing/privacy.html
+(Must match app.json → extra.privacyPolicyUrl exactly. Enable GitHub Pages first.)

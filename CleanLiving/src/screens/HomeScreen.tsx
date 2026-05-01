@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Constants from 'expo-constants';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import { getHouseScoreAverage, listScansDescending, type ScanRow } from '../db/scansDb';
@@ -12,6 +13,11 @@ function fmtTime(ms: number): string {
   const d = new Date(ms);
   return d.toLocaleString();
 }
+
+const privacyPolicyUrl =
+  typeof Constants.expoConfig?.extra?.privacyPolicyUrl === 'string'
+    ? Constants.expoConfig.extra.privacyPolicyUrl
+    : undefined;
 
 export function HomeScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(true);
@@ -114,6 +120,17 @@ export function HomeScreen({ navigation }: Props) {
             ))}
           </View>
         )}
+
+        {privacyPolicyUrl ? (
+          <Pressable
+            style={styles.privacyFooter}
+            onPress={() => void openExternalUrl(privacyPolicyUrl)}
+            accessibilityRole="link"
+            accessibilityLabel="Open privacy policy in browser"
+          >
+            <Text style={styles.privacyFooterText}>Privacy Policy</Text>
+          </Pressable>
+        ) : null}
       </ScrollView>
     </View>
   );
@@ -201,5 +218,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   swapBtnText: { color: '#4338CA', fontSize: 13, fontWeight: '900' },
+  privacyFooter: { alignItems: 'center', paddingVertical: 8 },
+  privacyFooterText: { fontSize: 13, fontWeight: '800', color: '#3B82F6' },
 });
 
