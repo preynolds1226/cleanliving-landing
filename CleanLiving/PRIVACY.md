@@ -26,7 +26,15 @@ This is a draft privacy policy for the CleanLiving prototype. It is not legal ad
 
 The app may show affiliate links to products. If you purchase through these links, CleanLiving may earn a commission at no extra cost to you.
 
+## Public URL (App Store)
+
+The policy shown to users should match the URL in `app.json` → `extra.privacyPolicyUrl`:
+
+https://preynolds1226.github.io/cleanliving-landing/privacy.html
+
+Enable **GitHub Pages** on the `cleanliving-landing` repo (branch `main`, root) so this URL resolves.
+
 ## Contact
 
-Add a contact email here before any public release.
+Use the same support email as the live `privacy.html` (replace `support@yourdomain.com` before release).
 

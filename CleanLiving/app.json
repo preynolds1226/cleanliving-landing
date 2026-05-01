@@ -32,7 +32,7 @@
       "expo-web-browser"
     ],
     "extra": {
-      "privacyPolicyUrl": "https://YOUR_GITHUB_USERNAME.github.io/cleanliving-landing/privacy.html"
+      "privacyPolicyUrl": "https://preynolds1226.github.io/cleanliving-landing/privacy.html"
     },
     "android": {
       "package": "com.cleanliving.app",
