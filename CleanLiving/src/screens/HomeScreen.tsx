@@ -1,11 +1,26 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { PrivacyPolicyFooter } from '../components/PrivacyPolicyFooter';
+import {
+  ActivityIndicator,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { PrivacyPolicyFooter } from '../components/PrivacyPolicyFooter';
+import { ScreenHeader } from '../components/ScreenHeader';
 import type { RootStackParamList } from '../navigation/types';
-import { getHouseScoreAverage, listScansDescending, type ScanRow } from '../db/scansDb';
+import {
+  getActivityStats,
+  getHouseScoreAverage,
+  listScansDescending,
+  type ScanRow,
+} from '../db/scansDb';
 import { getEffectiveSwapUrl } from '../services/affiliateLinks';
 import { openExternalUrl } from '../utils/openExternalUrl';
+import { useAppColors } from '../theme/colors';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
@@ -15,18 +30,42 @@ function fmtTime(ms: number): string {
 }
 
 export function HomeScreen({ navigation }: Props) {
+  const colors = useAppColors();
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [houseScore, setHouseScore] = useState<number | null>(null);
   const [recent, setRecent] = useState<ScanRow[]>([]);
+  const [stats, setStats] = useState({ totalScans: 0, weekCount: 0, streakDays: 0 });
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [avg, rows] = await Promise.all([getHouseScoreAverage(), listScansDescending()]);
+      const [avg, rows, activity] = await Promise.all([
+        getHouseScoreAverage(),
+        listScansDescending(),
+        getActivityStats(),
+      ]);
       setHouseScore(avg);
       setRecent(rows.slice(0, 5));
+      setStats(activity);
     } finally {
       setLoading(false);
+    }
+  }, []);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const [avg, rows, activity] = await Promise.all([
+        getHouseScoreAverage(),
+        listScansDescending(),
+        getActivityStats(),
+      ]);
+      setHouseScore(avg);
+      setRecent(rows.slice(0, 5));
+      setStats(activity);
+    } finally {
+      setRefreshing(false);
     }
   }, []);
 
@@ -35,80 +74,128 @@ export function HomeScreen({ navigation }: Props) {
   }, [load]);
 
   return (
-    <View style={styles.root}>
-      <View style={styles.header}>
-        <Text style={styles.brand}>CleanLiving</Text>
-        <Text style={styles.title}>Home</Text>
-      </View>
+    <View style={[styles.root, { backgroundColor: colors.bg }]}>
+      <ScreenHeader
+        title="Home"
+        navigation={navigation}
+        colors={colors}
+        right={
+          <Pressable
+            onPress={() => navigation.navigate('Settings')}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Open settings"
+          >
+            <Text style={[styles.gear, { color: colors.accent }]}>⚙</Text>
+          </Pressable>
+        }
+      />
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <View style={styles.hero}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} />
+        }
+      >
+        <View style={[styles.statsRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={styles.statCell}>
+            <Text style={[styles.statVal, { color: colors.text }]}>{stats.weekCount}</Text>
+            <Text style={[styles.statLbl, { color: colors.textMuted }]}>This week</Text>
+          </View>
+          <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
+          <View style={styles.statCell}>
+            <Text style={[styles.statVal, { color: colors.text }]}>{stats.streakDays}</Text>
+            <Text style={[styles.statLbl, { color: colors.textMuted }]}>Day streak</Text>
+          </View>
+          <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
+          <View style={styles.statCell}>
+            <Text style={[styles.statVal, { color: colors.text }]}>{stats.totalScans}</Text>
+            <Text style={[styles.statLbl, { color: colors.textMuted }]}>Total</Text>
+          </View>
+        </View>
+
+        <View style={[styles.hero, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <View style={styles.scoreBlock}>
-            <Text style={styles.scoreLabel}>House score</Text>
+            <Text style={[styles.scoreLabel, { color: colors.textMuted }]}>House score</Text>
             {loading ? (
-              <ActivityIndicator />
+              <ActivityIndicator color={colors.accent} />
             ) : (
-              <Text style={styles.scoreValue}>{houseScore ?? '—'}</Text>
+              <Text style={[styles.scoreValue, { color: colors.text }]}>{houseScore ?? '—'}</Text>
             )}
-            <Text style={styles.scoreHint}>Average purity across saved scans</Text>
+            <Text style={[styles.scoreHint, { color: colors.textMuted }]}>
+              Average purity across saved scans
+            </Text>
           </View>
 
-          <Pressable style={styles.primary} onPress={() => navigation.navigate('Scan')}>
-            <Text style={styles.primaryText}>Scan a product</Text>
+          <Pressable
+            style={[styles.primary, { backgroundColor: colors.inverseBg }]}
+            onPress={() => navigation.navigate('Scan')}
+          >
+            <Text style={[styles.primaryText, { color: colors.inverseText }]}>Scan a product</Text>
           </Pressable>
 
           <View style={styles.actions}>
-            <Pressable style={styles.actionBtn} onPress={() => navigation.navigate('History')}>
-              <Text style={styles.actionText}>View History</Text>
+            <Pressable
+              style={[styles.actionBtn, { backgroundColor: colors.surface2 }]}
+              onPress={() => navigation.navigate('History')}
+            >
+              <Text style={[styles.actionText, { color: colors.text }]}>View History</Text>
             </Pressable>
-            <Pressable style={styles.actionBtn} onPress={() => void load()}>
-              <Text style={styles.actionText}>Refresh</Text>
+            <Pressable
+              style={[styles.actionBtn, { backgroundColor: colors.surface2 }]}
+              onPress={() => void load()}
+            >
+              <Text style={[styles.actionText, { color: colors.text }]}>Refresh</Text>
             </Pressable>
           </View>
         </View>
 
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Recent</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Recent</Text>
           <Pressable onPress={() => navigation.navigate('History')}>
-            <Text style={styles.sectionLink}>See all</Text>
+            <Text style={[styles.sectionLink, { color: colors.accent }]}>See all</Text>
           </Pressable>
         </View>
 
         {loading ? (
           <View style={styles.loadingRow}>
-            <ActivityIndicator />
-            <Text style={styles.loadingText}>Loading scans…</Text>
+            <ActivityIndicator color={colors.accent} />
+            <Text style={[styles.loadingText, { color: colors.textMuted }]}>Loading scans…</Text>
           </View>
         ) : recent.length === 0 ? (
-          <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>No scans yet</Text>
-            <Text style={styles.emptyBody}>
+          <View style={[styles.empty, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>No scans yet</Text>
+            <Text style={[styles.emptyBody, { color: colors.textSecondary }]}>
               Scan your first product to start tracking progress and get one-tap swaps.
             </Text>
           </View>
         ) : (
           <View style={styles.list}>
             {recent.map((row) => (
-              <View key={row.id} style={styles.card}>
+              <View
+                key={row.id}
+                style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              >
                 <Pressable onPress={() => navigation.navigate('Result', { scanId: row.id })}>
                   <View style={styles.cardTop}>
-                    <Text style={styles.cardTitle} numberOfLines={1}>
+                    <Text style={[styles.cardTitle, { color: colors.text }]} numberOfLines={1}>
                       {row.productGuess}
                     </Text>
-                    <Text style={styles.cardScore}>{row.purityScore}</Text>
+                    <Text style={[styles.cardScore, { color: colors.text }]}>{row.purityScore}</Text>
                   </View>
-                  <Text style={styles.cardTime}>{fmtTime(row.createdAt)}</Text>
+                  <Text style={[styles.cardTime, { color: colors.textMuted }]}>{fmtTime(row.createdAt)}</Text>
                 </Pressable>
 
                 <View style={styles.cardBottom}>
-                  <Text style={styles.swapTitle} numberOfLines={1}>
+                  <Text style={[styles.swapTitle, { color: colors.textSecondary }]} numberOfLines={1}>
                     Swap: {row.result.cleanSwap.title}
                   </Text>
                   <Pressable
-                    style={styles.swapBtn}
+                    style={[styles.swapBtn, { backgroundColor: colors.accentSoft }]}
                     onPress={() => void openExternalUrl(getEffectiveSwapUrl(row.result))}
                   >
-                    <Text style={styles.swapBtnText}>Open link</Text>
+                    <Text style={[styles.swapBtnText, { color: colors.accent }]}>Open link</Text>
                   </Pressable>
                 </View>
               </View>
@@ -123,86 +210,79 @@ export function HomeScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#F8FAFC' },
-  header: { paddingTop: 18, paddingHorizontal: 20, paddingBottom: 8 },
-  brand: {
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: '#64748B',
-  },
-  title: { marginTop: 6, fontSize: 30, fontWeight: '900', color: '#0F172A' },
+  root: { flex: 1 },
+  gear: { fontSize: 22, fontWeight: '700' },
   scroll: { padding: 20, paddingBottom: 40, gap: 16 },
+  statsRow: {
+    flexDirection: 'row',
+    borderRadius: 16,
+    paddingVertical: 14,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  statCell: { flex: 1, alignItems: 'center', gap: 4 },
+  statVal: { fontSize: 20, fontWeight: '900' },
+  statLbl: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+  statDivider: { width: StyleSheet.hairlineWidth, alignSelf: 'stretch' },
   hero: {
-    backgroundColor: '#fff',
     borderRadius: 18,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
     gap: 14,
   },
   scoreBlock: { gap: 6 },
-  scoreLabel: { fontSize: 13, color: '#64748B', fontWeight: '800' },
-  scoreValue: { fontSize: 44, fontWeight: '900', color: '#0F172A' },
-  scoreHint: { fontSize: 12, color: '#94A3B8' },
+  scoreLabel: { fontSize: 13, fontWeight: '800' },
+  scoreValue: { fontSize: 44, fontWeight: '900' },
+  scoreHint: { fontSize: 12 },
   primary: {
-    backgroundColor: '#0F172A',
     borderRadius: 14,
     paddingVertical: 14,
     alignItems: 'center',
   },
-  primaryText: { color: '#fff', fontSize: 16, fontWeight: '900' },
+  primaryText: { fontSize: 16, fontWeight: '900' },
   actions: { flexDirection: 'row', gap: 10 },
   actionBtn: {
     flex: 1,
-    backgroundColor: '#F1F5F9',
     borderRadius: 14,
     paddingVertical: 12,
     alignItems: 'center',
   },
-  actionText: { color: '#0F172A', fontSize: 14, fontWeight: '800' },
+  actionText: { fontSize: 14, fontWeight: '800' },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  sectionTitle: { fontSize: 16, fontWeight: '900', color: '#0F172A' },
-  sectionLink: { fontSize: 14, fontWeight: '800', color: '#3B82F6' },
+  sectionTitle: { fontSize: 16, fontWeight: '900' },
+  sectionLink: { fontSize: 14, fontWeight: '800' },
   loadingRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 14 },
-  loadingText: { color: '#64748B', fontSize: 14 },
+  loadingText: { fontSize: 14 },
   empty: {
-    backgroundColor: '#fff',
     borderRadius: 18,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
     gap: 10,
   },
-  emptyTitle: { fontSize: 18, fontWeight: '900', color: '#0F172A' },
-  emptyBody: { fontSize: 14, color: '#475569', lineHeight: 20 },
+  emptyTitle: { fontSize: 18, fontWeight: '900' },
+  emptyBody: { fontSize: 14, lineHeight: 20 },
   list: { gap: 10 },
   card: {
-    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
     gap: 12,
   },
   cardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
-  cardTitle: { flex: 1, fontSize: 15, fontWeight: '800', color: '#0F172A' },
-  cardScore: { fontSize: 18, fontWeight: '900', color: '#0F172A' },
-  cardTime: { marginTop: 6, fontSize: 12, color: '#64748B' },
+  cardTitle: { flex: 1, fontSize: 15, fontWeight: '800' },
+  cardScore: { fontSize: 18, fontWeight: '900' },
+  cardTime: { marginTop: 6, fontSize: 12 },
   cardBottom: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 10,
   },
-  swapTitle: { flex: 1, fontSize: 13, fontWeight: '700', color: '#475569' },
+  swapTitle: { flex: 1, fontSize: 13, fontWeight: '700' },
   swapBtn: {
-    backgroundColor: '#EEF2FF',
     borderRadius: 12,
     paddingVertical: 10,
     paddingHorizontal: 12,
   },
-  swapBtnText: { color: '#4338CA', fontSize: 13, fontWeight: '900' },
+  swapBtnText: { fontSize: 13, fontWeight: '900' },
 });
-

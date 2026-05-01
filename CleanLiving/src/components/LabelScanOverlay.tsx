@@ -4,7 +4,15 @@ const FRAME_MARGIN = 36;
 const CORNER_LEN = 28;
 const CORNER_WIDTH = 3;
 
-export function LabelScanOverlay() {
+export function LabelScanOverlay({ mode = 'label' }: { mode?: 'label' | 'barcode' }) {
+  if (mode === 'barcode') {
+    return (
+      <View style={styles.barcodeWrap} pointerEvents="none">
+        <Text style={styles.barcodeHint}>Point at a product barcode</Text>
+        <Text style={styles.barcodeSub}>We’ll open a search for the code (no label AI in this mode)</Text>
+      </View>
+    );
+  }
   return (
     <View style={styles.wrap} pointerEvents="none">
       <View style={styles.dimTop} />
@@ -27,6 +35,26 @@ export function LabelScanOverlay() {
 }
 
 const styles = StyleSheet.create({
+  barcodeWrap: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    justifyContent: 'center',
+    paddingHorizontal: 28,
+    alignItems: 'center',
+  },
+  barcodeHint: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  barcodeSub: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
+    marginTop: 10,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
   wrap: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',

@@ -1,12 +1,15 @@
 import { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
+  Linking,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import { CameraView, useCameraPermissions } from 'expo-camera';
+import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera';
+import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { LabelScanOverlay } from '../components/LabelScanOverlay';
@@ -22,17 +25,33 @@ const ANALYZE_SECRET = process.env.EXPO_PUBLIC_ANALYZE_SECRET;
 const OPENAI_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY;
 
 type Phase = 'scan' | 'analyzing';
+type ScanMode = 'label' | 'barcode';
+
+const BARCODE_TYPES = [
+  'ean13',
+  'ean8',
+  'upc_a',
+  'upc_e',
+  'code128',
+  'qr',
+  'code39',
+] as const;
 
 export function ScanScreen({ navigation }: Props) {
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
   const [phase, setPhase] = useState<Phase>('scan');
   const [error, setError] = useState<string | null>(null);
+  const [torchOn, setTorchOn] = useState(false);
+  const [scanMode, setScanMode] = useState<ScanMode>('label');
+  const lastBase64Ref = useRef<string | null>(null);
+  const lastBarcodeAt = useRef(0);
 
   const runAnalyze = useCallback(
     async (base64: string | null) => {
       setPhase('analyzing');
       setError(null);
+      if (base64) lastBase64Ref.current = base64;
       try {
         const raw = base64
           ? await analyzeLabelFromBase64(base64, {
@@ -43,6 +62,7 @@ export function ScanScreen({ navigation }: Props) {
           : getMockScanResult();
         const result = withEffectiveAffiliate(raw);
         const scanId = await insertScan(result);
+        lastBase64Ref.current = null;
         navigation.navigate('Result', { scanId });
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Something went wrong');
@@ -54,6 +74,7 @@ export function ScanScreen({ navigation }: Props) {
   );
 
   const capture = useCallback(async () => {
+    if (scanMode !== 'label') return;
     const cam = cameraRef.current;
     if (!cam) return;
     try {
@@ -70,16 +91,36 @@ export function ScanScreen({ navigation }: Props) {
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Capture failed');
     }
-  }, [runAnalyze]);
+  }, [runAnalyze, scanMode]);
 
   const onDemo = useCallback(() => {
     void runAnalyze(null);
   }, [runAnalyze]);
 
+  const onRetry = useCallback(() => {
+    const b64 = lastBase64Ref.current;
+    if (b64) void runAnalyze(b64);
+  }, [runAnalyze]);
+
+  const onBarcodeScanned = useCallback((result: BarcodeScanningResult) => {
+    const now = Date.now();
+    if (now - lastBarcodeAt.current < 2200) return;
+    lastBarcodeAt.current = now;
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const q = encodeURIComponent(result.data);
+    Alert.alert('Barcode scanned', result.data, [
+      {
+        text: 'Web search',
+        onPress: () => void Linking.openURL(`https://www.google.com/search?q=${q}`),
+      },
+      { text: 'OK', style: 'cancel' },
+    ]);
+  }, []);
+
   if (!permission) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color="#7CFFB2" />
       </View>
     );
   }
@@ -87,6 +128,9 @@ export function ScanScreen({ navigation }: Props) {
   if (!permission.granted) {
     return (
       <SafeAreaView style={styles.permission}>
+        <Pressable style={styles.backPermission} onPress={() => navigation.goBack()} hitSlop={12}>
+          <Text style={styles.backPermissionText}>← Back</Text>
+        </Pressable>
         <Text style={styles.permissionTitle}>Camera access</Text>
         <Text style={styles.permissionBody}>
           We need the camera to scan labels with the live framing guide.
@@ -106,12 +150,65 @@ export function ScanScreen({ navigation }: Props) {
 
   return (
     <View style={styles.scanRoot}>
-      <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing="back" />
-      <LabelScanOverlay />
+      <CameraView
+        ref={cameraRef}
+        style={StyleSheet.absoluteFill}
+        facing="back"
+        enableTorch={scanMode === 'label' && torchOn}
+        barcodeScannerSettings={
+          scanMode === 'barcode'
+            ? { barcodeTypes: [...BARCODE_TYPES] }
+            : { barcodeTypes: [] }
+        }
+        onBarcodeScanned={scanMode === 'barcode' ? onBarcodeScanned : undefined}
+      />
+      <LabelScanOverlay mode={scanMode} />
       <SafeAreaView style={styles.scanChrome} edges={['top']}>
+        <View style={styles.topRow}>
+          <Pressable onPress={() => navigation.goBack()} hitSlop={12} style={styles.backCam}>
+            <Text style={styles.backCamText}>← Back</Text>
+          </Pressable>
+          {scanMode === 'label' ? (
+            <Pressable
+              onPress={() => setTorchOn((t) => !t)}
+              style={styles.torchBtn}
+              hitSlop={8}
+            >
+              <Text style={styles.torchText}>{torchOn ? 'Light on' : 'Light'}</Text>
+            </Pressable>
+          ) : (
+            <View style={styles.torchPlaceholder} />
+          )}
+        </View>
         <Text style={styles.brand}>CleanLiving</Text>
-        <Text style={styles.liveVision}>Live Vision</Text>
-        {!ANALYZE_API_URL?.trim() ? (
+        <Text style={styles.liveVision}>{scanMode === 'label' ? 'Live Vision' : 'Barcode'}</Text>
+        <View style={styles.modeRow}>
+          <Pressable
+            style={[styles.modePill, scanMode === 'label' && styles.modePillActive]}
+            onPress={() => {
+              setScanMode('label');
+              setTorchOn(false);
+              setError(null);
+            }}
+          >
+            <Text style={[styles.modePillText, scanMode === 'label' && styles.modePillTextActive]}>
+              Label
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[styles.modePill, scanMode === 'barcode' && styles.modePillActive]}
+            onPress={() => {
+              setScanMode('barcode');
+              setTorchOn(false);
+              setError(null);
+            }}
+          >
+            <Text style={[styles.modePillText, scanMode === 'barcode' && styles.modePillTextActive]}>
+              Barcode
+            </Text>
+          </Pressable>
+        </View>
+        {!ANALYZE_API_URL?.trim() && scanMode === 'label' ? (
           <Text style={styles.demoBanner}>
             Demo mode — set EXPO_PUBLIC_ANALYZE_API_URL to use your secure AI proxy
           </Text>
@@ -125,9 +222,18 @@ export function ScanScreen({ navigation }: Props) {
       ) : null}
       <SafeAreaView style={styles.bottomBar} edges={['bottom']}>
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
-        <Pressable style={styles.captureOuter} onPress={() => void capture()}>
-          <View style={styles.captureInner} />
-        </Pressable>
+        {error && lastBase64Ref.current ? (
+          <Pressable style={styles.retryBtn} onPress={onRetry}>
+            <Text style={styles.retryText}>Try again</Text>
+          </Pressable>
+        ) : null}
+        {scanMode === 'label' ? (
+          <Pressable style={styles.captureOuter} onPress={() => void capture()}>
+            <View style={styles.captureInner} />
+          </Pressable>
+        ) : (
+          <Text style={styles.barcodeWait}>Aim at barcode — it scans automatically</Text>
+        )}
         <View style={styles.bottomLinks}>
           <Pressable onPress={onDemo}>
             <Text style={styles.demoLink}>Demo scan</Text>
@@ -159,8 +265,19 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     paddingHorizontal: 20,
-    paddingTop: 8,
+    paddingTop: 4,
   },
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  backCam: { paddingVertical: 4 },
+  backCamText: { color: 'rgba(255,255,255,0.95)', fontSize: 16, fontWeight: '700' },
+  torchBtn: { paddingVertical: 4 },
+  torchText: { color: 'rgba(255,255,255,0.9)', fontSize: 14, fontWeight: '700' },
+  torchPlaceholder: { width: 64 },
   brand: {
     color: 'rgba(255,255,255,0.9)',
     fontSize: 13,
@@ -173,6 +290,28 @@ const styles = StyleSheet.create({
     fontSize: 26,
     fontWeight: '800',
     marginTop: 4,
+  },
+  modeRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 12,
+  },
+  modePill: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+  },
+  modePillActive: {
+    backgroundColor: 'rgba(124,255,178,0.35)',
+  },
+  modePillText: {
+    color: 'rgba(255,255,255,0.75)',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  modePillTextActive: {
+    color: '#fff',
   },
   demoBanner: {
     marginTop: 10,
@@ -187,7 +326,7 @@ const styles = StyleSheet.create({
     right: 0,
     alignItems: 'center',
     paddingBottom: 12,
-    gap: 12,
+    gap: 10,
   },
   bottomLinks: {
     flexDirection: 'row',
@@ -213,6 +352,13 @@ const styles = StyleSheet.create({
     borderRadius: 29,
     backgroundColor: '#fff',
   },
+  barcodeWait: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+    paddingHorizontal: 24,
+  },
   demoLink: {
     color: 'rgba(255,255,255,0.65)',
     fontSize: 14,
@@ -236,12 +382,21 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 24,
   },
+  retryBtn: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+  },
+  retryText: { color: '#fff', fontWeight: '800', fontSize: 15 },
   permission: {
     flex: 1,
     padding: 24,
     justifyContent: 'center',
     backgroundColor: '#F8FAFC',
   },
+  backPermission: { position: 'absolute', top: 56, left: 20 },
+  backPermissionText: { fontSize: 16, fontWeight: '700', color: '#3B82F6' },
   permissionTitle: {
     fontSize: 24,
     fontWeight: '800',
@@ -276,4 +431,3 @@ const styles = StyleSheet.create({
     color: '#3B82F6',
   },
 });
-

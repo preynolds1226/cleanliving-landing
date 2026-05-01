@@ -1,14 +1,18 @@
 import { useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, Share, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import type { HormoneInfo, IngredientItem, ScanResult } from '../types';
 import { PrivacyPolicyFooter } from './PrivacyPolicyFooter';
 import { getEffectiveSwapUrl } from '../services/affiliateLinks';
 import { openExternalUrl } from '../utils/openExternalUrl';
+import { buildIngredientsCopyText, buildScanShareText } from '../utils/scanShare';
+import { useAppColors } from '../theme/colors';
+import type { AppColors } from '../theme/colors';
 
-function riskColor(risk: IngredientItem['risk']): string {
-  if (risk === 'avoid') return '#FEE2E2';
-  if (risk === 'caution') return '#FEF9C3';
-  return '#ECFDF5';
+function riskBg(risk: IngredientItem['risk'], dark: boolean): string {
+  if (risk === 'avoid') return dark ? 'rgba(127,29,29,0.45)' : '#FEE2E2';
+  if (risk === 'caution') return dark ? 'rgba(113,63,18,0.45)' : '#FEF9C3';
+  return dark ? 'rgba(20,83,45,0.35)' : '#ECFDF5';
 }
 
 function riskBorder(risk: IngredientItem['risk']): string {
@@ -17,18 +21,20 @@ function riskBorder(risk: IngredientItem['risk']): string {
   return '#22C55E';
 }
 
-function PurityGauge({ score }: { score: number }) {
+function PurityGauge({ score, c }: { score: number; c: AppColors }) {
   const clamped = Math.max(1, Math.min(100, score));
   const hue = (clamped / 100) * 120;
   const barColor = `hsl(${hue}, 70%, 42%)`;
   return (
-    <View style={styles.gaugeCard}>
-      <Text style={styles.gaugeLabel}>Purity score</Text>
-      <View style={styles.gaugeTrack}>
+    <View style={[styles.gaugeCard, { backgroundColor: c.surface, borderColor: c.border }]}>
+      <Text style={[styles.gaugeLabel, { color: c.textMuted }]}>Purity score</Text>
+      <View style={[styles.gaugeTrack, { backgroundColor: c.surface2 }]}>
         <View style={[styles.gaugeFill, { width: `${clamped}%`, backgroundColor: barColor }]} />
       </View>
-      <Text style={styles.gaugeValue}>{clamped}</Text>
-      <Text style={styles.gaugeHint}>1 = highest concern · 100 = cleanest</Text>
+      <Text style={[styles.gaugeValue, { color: c.text }]}>{clamped}</Text>
+      <Text style={[styles.gaugeHint, { color: c.textMuted }]}>
+        1 = highest concern · 100 = cleanest
+      </Text>
     </View>
   );
 }
@@ -40,51 +46,83 @@ export function ScanResultPanel({
   result: ScanResult;
   onScanAgain: () => void;
 }) {
+  const c = useAppColors();
+  const dark = useColorScheme() === 'dark';
   const [hormoneDetail, setHormoneDetail] = useState<HormoneInfo | null>(null);
 
-  return (
-    <View style={styles.root}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>{result.productGuess}</Text>
+  const onCopyIngredients = async () => {
+    await Clipboard.setStringAsync(buildIngredientsCopyText(result));
+  };
 
-        <PurityGauge score={result.purityScore} />
+  const onShare = async () => {
+    await Share.share({ message: buildScanShareText(result), title: result.productGuess });
+  };
+
+  return (
+    <View style={[styles.root, { backgroundColor: c.bg }]}>
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <Text style={[styles.title, { color: c.text }]}>{result.productGuess}</Text>
+
+        <View style={styles.shareRow}>
+          <Pressable
+            style={[styles.shareBtn, { backgroundColor: c.surface2, borderColor: c.border }]}
+            onPress={() => void onCopyIngredients()}
+          >
+            <Text style={[styles.shareBtnText, { color: c.text }]}>Copy ingredients</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.shareBtn, { backgroundColor: c.surface2, borderColor: c.border }]}
+            onPress={() => void onShare()}
+          >
+            <Text style={[styles.shareBtnText, { color: c.text }]}>Share summary</Text>
+          </Pressable>
+        </View>
+
+        <PurityGauge score={result.purityScore} c={c} />
 
         {result.microplasticWarning ? (
-          <View style={styles.microCard}>
-            <Text style={styles.microTitle}>Microplastic exposure</Text>
-            <Text style={styles.microBody}>{result.microplasticWarning}</Text>
+          <View style={[styles.microCard, { backgroundColor: c.accentSoft, borderColor: c.border }]}>
+            <Text style={[styles.microTitle, { color: c.accent }]}>Microplastic exposure</Text>
+            <Text style={[styles.microBody, { color: c.textSecondary }]}>{result.microplasticWarning}</Text>
           </View>
         ) : null}
 
-        <Text style={styles.sectionTitle}>Ingredients</Text>
+        <Text style={[styles.sectionTitle, { color: c.text }]}>Ingredients</Text>
         <View style={styles.ingredientList}>
           {result.ingredients.map((ing, index) => (
             <View
               key={`${ing.name}-${index}`}
               style={[
                 styles.ingredientRow,
-                { backgroundColor: riskColor(ing.risk), borderLeftColor: riskBorder(ing.risk) },
+                {
+                  backgroundColor: riskBg(ing.risk, dark),
+                  borderLeftColor: riskBorder(ing.risk),
+                },
               ]}
             >
-              <Text style={styles.ingredientName}>{ing.name}</Text>
-              {ing.reason ? <Text style={styles.ingredientReason}>{ing.reason}</Text> : null}
+              <Text style={[styles.ingredientName, { color: c.text }]}>{ing.name}</Text>
+              {ing.reason ? (
+                <Text style={[styles.ingredientReason, { color: c.textSecondary }]}>{ing.reason}</Text>
+              ) : null}
             </View>
           ))}
         </View>
 
         {result.hormoneNotes.length > 0 ? (
           <>
-            <Text style={styles.sectionTitle}>Hormone impact</Text>
-            <Text style={styles.sectionSub}>Tap an item for how it may affect the body</Text>
+            <Text style={[styles.sectionTitle, { color: c.text }]}>Hormone impact</Text>
+            <Text style={[styles.sectionSub, { color: c.textMuted }]}>
+              Tap an item for how it may affect the body
+            </Text>
             <View style={styles.hormoneRow}>
               {result.hormoneNotes.map((h) => (
                 <Pressable
                   key={h.chemical}
-                  style={styles.hormoneChip}
+                  style={[styles.hormoneChip, { backgroundColor: c.surface2 }]}
                   onPress={() => setHormoneDetail(h)}
                 >
-                  <Text style={styles.hormoneChipIcon}>◇</Text>
-                  <Text style={styles.hormoneChipText} numberOfLines={1}>
+                  <Text style={[styles.hormoneChipIcon, { color: c.accent }]}>◇</Text>
+                  <Text style={[styles.hormoneChipText, { color: c.textSecondary }]} numberOfLines={1}>
                     {h.chemical}
                   </Text>
                 </Pressable>
@@ -93,30 +131,30 @@ export function ScanResultPanel({
           </>
         ) : null}
 
-        <View style={styles.swapCard}>
-          <Text style={styles.swapEyebrow}>Clean alternative</Text>
-          <Text style={styles.swapTitle}>{result.cleanSwap.title}</Text>
-          <Text style={styles.swapDesc}>{result.cleanSwap.description}</Text>
+        <View style={[styles.swapCard, { backgroundColor: c.surface, borderColor: c.border }]}>
+          <Text style={[styles.swapEyebrow, { color: '#10B981' }]}>Clean alternative</Text>
+          <Text style={[styles.swapTitle, { color: c.text }]}>{result.cleanSwap.title}</Text>
+          <Text style={[styles.swapDesc, { color: c.textSecondary }]}>{result.cleanSwap.description}</Text>
           {result.cleanSwap.dealNote ? (
-            <View style={styles.dealBadge}>
+            <View style={[styles.dealBadge, { backgroundColor: c.surface2 }]}>
               <Text style={styles.dealText}>{result.cleanSwap.dealNote}</Text>
             </View>
           ) : null}
           <Pressable
-            style={styles.swapButton}
+            style={[styles.swapButton, { backgroundColor: c.inverseBg }]}
             onPress={() => void openExternalUrl(getEffectiveSwapUrl(result))}
           >
-            <Text style={styles.swapButtonText}>View swap (affiliate)</Text>
+            <Text style={[styles.swapButtonText, { color: c.inverseText }]}>View swap (affiliate)</Text>
           </Pressable>
-          <Text style={styles.affiliateDisclaimer}>
+          <Text style={[styles.affiliateDisclaimer, { color: c.textMuted }]}>
             {result.cleanSwap.partner === 'impact'
               ? 'Partner link (Impact). If you buy through it, we may earn a commission at no extra cost to you.'
               : 'Affiliate link — if you buy through it, we may earn a commission at no extra cost to you.'}
           </Text>
         </View>
 
-        <Pressable style={styles.secondaryBtn} onPress={onScanAgain}>
-          <Text style={styles.secondaryBtnText}>Scan another product</Text>
+        <Pressable onPress={onScanAgain}>
+          <Text style={[styles.secondaryBtnText, { color: c.textSecondary }]}>Scan another product</Text>
         </Pressable>
 
         <PrivacyPolicyFooter />
@@ -124,11 +162,17 @@ export function ScanResultPanel({
 
       <Modal visible={!!hormoneDetail} transparent animationType="fade">
         <Pressable style={styles.modalBackdrop} onPress={() => setHormoneDetail(null)}>
-          <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.modalTitle}>{hormoneDetail?.chemical}</Text>
-            <Text style={styles.modalBody}>{hormoneDetail?.explanation}</Text>
-            <Pressable style={styles.modalClose} onPress={() => setHormoneDetail(null)}>
-              <Text style={styles.modalCloseText}>Got it</Text>
+          <Pressable
+            style={[styles.modalCard, { backgroundColor: c.surface }]}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <Text style={[styles.modalTitle, { color: c.text }]}>{hormoneDetail?.chemical}</Text>
+            <Text style={[styles.modalBody, { color: c.textSecondary }]}>{hormoneDetail?.explanation}</Text>
+            <Pressable
+              style={[styles.modalClose, { backgroundColor: c.accentSoft }]}
+              onPress={() => setHormoneDetail(null)}
+            >
+              <Text style={[styles.modalCloseText, { color: c.accent }]}>Got it</Text>
             </Pressable>
           </Pressable>
         </Pressable>
@@ -140,23 +184,30 @@ export function ScanResultPanel({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
   },
   scroll: {
     padding: 20,
     paddingBottom: 40,
   },
+  shareRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
+  shareBtn: {
+    flex: 1,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+  },
+  shareBtnText: { fontSize: 14, fontWeight: '800' },
   title: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   gaugeCard: {
-    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
+    borderWidth: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06,
@@ -165,14 +216,12 @@ const styles = StyleSheet.create({
   },
   gaugeLabel: {
     fontSize: 13,
-    color: '#64748B',
     fontWeight: '600',
     marginBottom: 8,
   },
   gaugeTrack: {
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#E2E8F0',
     overflow: 'hidden',
   },
   gaugeFill: {
@@ -182,42 +231,34 @@ const styles = StyleSheet.create({
   gaugeValue: {
     fontSize: 28,
     fontWeight: '800',
-    color: '#0F172A',
     marginTop: 8,
   },
   gaugeHint: {
     fontSize: 12,
-    color: '#94A3B8',
     marginTop: 4,
   },
   microCard: {
-    backgroundColor: '#EFF6FF',
     borderRadius: 12,
     padding: 14,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#BFDBFE',
   },
   microTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#1D4ED8',
     marginBottom: 6,
   },
   microBody: {
     fontSize: 14,
-    color: '#1E3A5F',
     lineHeight: 20,
   },
   sectionTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#0F172A',
     marginBottom: 4,
   },
   sectionSub: {
     fontSize: 13,
-    color: '#64748B',
     marginBottom: 10,
   },
   ingredientList: {
@@ -232,11 +273,9 @@ const styles = StyleSheet.create({
   ingredientName: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#0F172A',
   },
   ingredientReason: {
     fontSize: 13,
-    color: '#475569',
     marginTop: 4,
     lineHeight: 18,
   },
@@ -249,7 +288,6 @@ const styles = StyleSheet.create({
   hormoneChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F1F5F9',
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 20,
@@ -257,27 +295,22 @@ const styles = StyleSheet.create({
     maxWidth: '100%',
   },
   hormoneChipIcon: {
-    color: '#6366F1',
     fontSize: 14,
   },
   hormoneChipText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#334155',
     flexShrink: 1,
   },
   swapCard: {
-    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 18,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
   },
   swapEyebrow: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#10B981',
     letterSpacing: 0.6,
     textTransform: 'uppercase',
     marginBottom: 6,
@@ -285,18 +318,15 @@ const styles = StyleSheet.create({
   swapTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#0F172A',
     marginBottom: 8,
   },
   swapDesc: {
     fontSize: 15,
-    color: '#475569',
     lineHeight: 22,
     marginBottom: 12,
   },
   dealBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: '#FEF3C7',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
@@ -308,31 +338,25 @@ const styles = StyleSheet.create({
     color: '#B45309',
   },
   swapButton: {
-    backgroundColor: '#0F172A',
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
   },
   swapButtonText: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: '700',
   },
   affiliateDisclaimer: {
     marginTop: 10,
     fontSize: 12,
-    color: '#94A3B8',
     lineHeight: 16,
     textAlign: 'center',
-  },
-  secondaryBtn: {
-    alignItems: 'center',
-    paddingVertical: 14,
   },
   secondaryBtnText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#475569',
+    textAlign: 'center',
+    paddingVertical: 14,
   },
   modalBackdrop: {
     flex: 1,
@@ -341,24 +365,20 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   modalCard: {
-    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 20,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#0F172A',
     marginBottom: 12,
   },
   modalBody: {
     fontSize: 15,
-    color: '#475569',
     lineHeight: 22,
     marginBottom: 20,
   },
   modalClose: {
-    backgroundColor: '#EEF2FF',
     borderRadius: 10,
     paddingVertical: 12,
     alignItems: 'center',
@@ -366,6 +386,5 @@ const styles = StyleSheet.create({
   modalCloseText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#4338CA',
   },
 });

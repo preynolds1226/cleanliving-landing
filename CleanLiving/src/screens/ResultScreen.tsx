@@ -1,11 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { ScanResult } from '../types';
 import { ScanResultPanel } from '../components/ScanResultPanel';
-import { getScanById } from '../db/scansDb';
+import { ScreenHeader } from '../components/ScreenHeader';
 import { PrivacyPolicyFooter } from '../components/PrivacyPolicyFooter';
+import { getScanById } from '../db/scansDb';
 import type { RootStackParamList } from '../navigation/types';
+import { useAppColors } from '../theme/colors';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Result'>;
 
@@ -19,6 +22,8 @@ function parseResultJson(param: unknown): ScanResult | null {
 }
 
 export function ResultScreen({ navigation, route }: Props) {
+  const colors = useAppColors();
+  const hapticDone = useRef(false);
   const [loading, setLoading] = useState(true);
   const [result, setResult] = useState<ScanResult | null>(null);
   const scanId = useMemo(() => {
@@ -32,6 +37,7 @@ export function ResultScreen({ navigation, route }: Props) {
 
   useEffect(() => {
     let alive = true;
+    hapticDone.current = false;
     (async () => {
       setLoading(true);
       try {
@@ -51,50 +57,68 @@ export function ResultScreen({ navigation, route }: Props) {
     };
   }, [scanId, resultJson]);
 
+  useEffect(() => {
+    if (!loading && result && !hapticDone.current) {
+      hapticDone.current = true;
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+  }, [loading, result]);
+
   const onScanAgain = useCallback(() => {
     navigation.navigate('Scan');
   }, [navigation]);
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" />
-        <Text style={styles.loadingText}>Loading result…</Text>
-        <PrivacyPolicyFooter />
+      <View style={[styles.centered, { backgroundColor: colors.bg }]}>
+        <ScreenHeader title="Result" navigation={navigation} colors={colors} />
+        <View style={styles.centerBody}>
+          <ActivityIndicator size="large" color={colors.accent} />
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading result…</Text>
+          <PrivacyPolicyFooter />
+        </View>
       </View>
     );
   }
 
   if (!result) {
     return (
-      <View style={styles.centered}>
-        <Text style={styles.loadingText}>Result not found.</Text>
-        <Pressable style={styles.link} onPress={() => navigation.navigate('History')}>
-          <Text style={styles.linkText}>Go to History</Text>
-        </Pressable>
-        <Pressable style={styles.link} onPress={onScanAgain}>
-          <Text style={styles.linkText}>Scan again</Text>
-        </Pressable>
-        <PrivacyPolicyFooter />
+      <View style={[styles.centered, { backgroundColor: colors.bg }]}>
+        <ScreenHeader title="Result" navigation={navigation} colors={colors} />
+        <View style={styles.centerBody}>
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Result not found.</Text>
+          <Pressable style={styles.link} onPress={() => navigation.navigate('History')}>
+            <Text style={[styles.linkText, { color: colors.accent }]}>Go to History</Text>
+          </Pressable>
+          <Pressable style={styles.link} onPress={onScanAgain}>
+            <Text style={[styles.linkText, { color: colors.accent }]}>Scan again</Text>
+          </Pressable>
+          <PrivacyPolicyFooter />
+        </View>
       </View>
     );
   }
 
-  return <ScanResultPanel result={result} onScanAgain={onScanAgain} />;
+  return (
+    <View style={[styles.wrap, { backgroundColor: colors.bg }]}>
+      <ScreenHeader title="Result" navigation={navigation} colors={colors} />
+      <ScanResultPanel result={result} onScanAgain={onScanAgain} />
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-  centered: {
+  wrap: { flex: 1 },
+  centered: { flex: 1 },
+  centerBody: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
-    backgroundColor: '#F8FAFC',
     padding: 24,
   },
   loadingText: {
     fontSize: 16,
-    color: '#475569',
     textAlign: 'center',
   },
   link: {
@@ -104,7 +128,5 @@ const styles = StyleSheet.create({
   linkText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#3B82F6',
   },
 });
-
