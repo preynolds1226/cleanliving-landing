@@ -1,5 +1,17 @@
 import type { SwapCategory } from '../types';
 
+/** Category chips on Explore (null = no category filter). */
+export const EXPLORE_CATEGORY_OPTIONS: { value: SwapCategory | null; label: string }[] = [
+  { value: null, label: 'All' },
+  { value: 'stainlessBottle', label: 'Steel' },
+  { value: 'glassBottle', label: 'Glass' },
+  { value: 'castileSoap', label: 'Castile' },
+  { value: 'fragranceFreePersonalCare', label: 'Body' },
+  { value: 'organicSnack', label: 'Snacks' },
+  { value: 'bpaFreeStorage', label: 'Storage' },
+  { value: 'naturalFiberClothing', label: 'Textiles' },
+];
+
 export type ExplorePick = {
   id: string;
   title: string;

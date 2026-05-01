@@ -1,11 +1,10 @@
 import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../navigation/types';
+import type { OnboardingScreenProps } from '../navigation/types';
 import { useAppColors } from '../theme/colors';
 import { setOnboardingCompleted } from '../utils/onboardingStorage';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Onboarding'>;
+type Props = OnboardingScreenProps;
 
 const SLIDES = [
   {
@@ -28,7 +27,7 @@ export function OnboardingScreen({ navigation }: Props) {
 
   const finish = useCallback(async () => {
     await setOnboardingCompleted();
-    navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+    navigation.reset({ index: 0, routes: [{ name: 'AppStack' }] });
   }, [navigation]);
 
   const next = useCallback(() => {

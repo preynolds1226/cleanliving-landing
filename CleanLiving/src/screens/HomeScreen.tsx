@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -8,10 +8,10 @@ import {
   Text,
   View,
 } from 'react-native';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
 import { PrivacyPolicyFooter } from '../components/PrivacyPolicyFooter';
 import { ScreenHeader } from '../components/ScreenHeader';
-import type { RootStackParamList } from '../navigation/types';
+import type { HomeScreenProps } from '../navigation/types';
 import {
   getActivityStats,
   getHouseScoreAverage,
@@ -22,7 +22,7 @@ import { getEffectiveSwapUrl } from '../services/affiliateLinks';
 import { openExternalUrl } from '../utils/openExternalUrl';
 import { useAppColors } from '../theme/colors';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
+type Props = HomeScreenProps;
 
 function fmtTime(ms: number): string {
   const d = new Date(ms);
@@ -69,9 +69,11 @@ export function HomeScreen({ navigation }: Props) {
     }
   }, []);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load])
+  );
 
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }]}>
@@ -179,7 +181,7 @@ export function HomeScreen({ navigation }: Props) {
           <View style={[styles.empty, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text style={[styles.emptyTitle, { color: colors.text }]}>No scans yet</Text>
             <Text style={[styles.emptyBody, { color: colors.textSecondary }]}>
-              Scan your first product to start tracking progress and get one-tap swaps.
+              Open the Scan tab, photograph a label, and we’ll score ingredients and suggest a cleaner swap.
             </Text>
           </View>
         ) : (

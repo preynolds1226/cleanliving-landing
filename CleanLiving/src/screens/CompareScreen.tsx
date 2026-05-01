@@ -1,13 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScreenHeader } from '../components/ScreenHeader';
-import type { RootStackParamList } from '../navigation/types';
+import type { CompareScreenProps } from '../navigation/types';
 import { getScanById, type ScanRow } from '../db/scansDb';
 import { useAppColors } from '../theme/colors';
 import type { RiskLevel } from '../types';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Compare'>;
+type Props = CompareScreenProps;
 
 function countRisk(ingredients: { risk: RiskLevel }[], level: RiskLevel): number {
   return ingredients.filter((i) => i.risk === level).length;

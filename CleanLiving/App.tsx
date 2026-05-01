@@ -6,17 +6,27 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
-import { HomeScreen } from './src/screens/HomeScreen';
-import { ScanScreen } from './src/screens/ScanScreen';
 import { ResultScreen } from './src/screens/ResultScreen';
-import { HistoryScreen } from './src/screens/HistoryScreen';
 import { CompareScreen } from './src/screens/CompareScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
-import { ExploreScreen } from './src/screens/ExploreScreen';
-import type { RootStackParamList } from './src/navigation/types';
+import { MainTabs } from './src/navigation/MainTabs';
+import type { AppStackParamList, RootStackParamList } from './src/navigation/types';
 import { hasCompletedOnboarding } from './src/utils/onboardingStorage';
+import { rootNavigationRef } from './src/navigation/navigationRef';
 
-const Stack = createNativeStackNavigator<RootStackParamList>();
+const RootStack = createNativeStackNavigator<RootStackParamList>();
+const InnerStack = createNativeStackNavigator<AppStackParamList>();
+
+function AppStack() {
+  return (
+    <InnerStack.Navigator screenOptions={{ headerShown: false }}>
+      <InnerStack.Screen name="Tabs" component={MainTabs} />
+      <InnerStack.Screen name="Result" component={ResultScreen} />
+      <InnerStack.Screen name="Compare" component={CompareScreen} />
+      <InnerStack.Screen name="Settings" component={SettingsScreen} />
+    </InnerStack.Navigator>
+  );
+}
 
 export default function App() {
   const [bootReady, setBootReady] = useState(false);
@@ -25,7 +35,7 @@ export default function App() {
   useEffect(() => {
     void (async () => {
       const done = await hasCompletedOnboarding();
-      setInitialRoute(done ? 'Home' : 'Onboarding');
+      setInitialRoute(done ? 'AppStack' : 'Onboarding');
       setBootReady(true);
     })();
   }, []);
@@ -42,17 +52,11 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <StatusBar style="auto" />
-        <NavigationContainer>
-          <Stack.Navigator initialRouteName={initialRoute} screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-            <Stack.Screen name="Home" component={HomeScreen} />
-            <Stack.Screen name="Scan" component={ScanScreen} />
-            <Stack.Screen name="Result" component={ResultScreen} />
-            <Stack.Screen name="History" component={HistoryScreen} />
-            <Stack.Screen name="Compare" component={CompareScreen} />
-            <Stack.Screen name="Settings" component={SettingsScreen} />
-            <Stack.Screen name="Explore" component={ExploreScreen} />
-          </Stack.Navigator>
+        <NavigationContainer ref={rootNavigationRef}>
+          <RootStack.Navigator initialRouteName={initialRoute} screenOptions={{ headerShown: false }}>
+            <RootStack.Screen name="Onboarding" component={OnboardingScreen} />
+            <RootStack.Screen name="AppStack" component={AppStack} />
+          </RootStack.Navigator>
         </NavigationContainer>
       </SafeAreaProvider>
     </GestureHandlerRootView>

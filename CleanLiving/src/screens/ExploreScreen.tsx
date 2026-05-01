@@ -3,18 +3,19 @@ import {
   FlatList,
   ListRenderItem,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { ExplorePick } from '../data/explorePicks';
-import { EXPLORE_PICKS } from '../data/explorePicks';
+import { EXPLORE_CATEGORY_OPTIONS, EXPLORE_PICKS } from '../data/explorePicks';
 import { PrivacyPolicyFooter } from '../components/PrivacyPolicyFooter';
 import { ScreenHeader } from '../components/ScreenHeader';
-import type { RootStackParamList } from '../navigation/types';
+import type { ExploreScreenProps } from '../navigation/types';
+import type { SwapCategory } from '../types';
 import {
   getExploreSavedPickIds,
   removeExplorePick,
@@ -24,7 +25,7 @@ import { getAffiliateSwapForCategory } from '../services/affiliateLinks';
 import { openExternalUrl } from '../utils/openExternalUrl';
 import { useAppColors, type AppColors } from '../theme/colors';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Explore'>;
+type Props = ExploreScreenProps;
 
 type FilterTab = 'all' | 'saved';
 
@@ -34,6 +35,8 @@ const ExploreListHeader = memo(function ExploreListHeader({
   tab,
   onTab,
   savedCount,
+  categoryFilter,
+  onCategory,
   colors,
 }: {
   query: string;
@@ -41,6 +44,8 @@ const ExploreListHeader = memo(function ExploreListHeader({
   tab: FilterTab;
   onTab: (t: FilterTab) => void;
   savedCount: number;
+  categoryFilter: SwapCategory | null;
+  onCategory: (c: SwapCategory | null) => void;
   colors: AppColors;
 }) {
   return (
@@ -59,6 +64,7 @@ const ExploreListHeader = memo(function ExploreListHeader({
           style={[styles.searchInput, { color: colors.text }]}
           autoCorrect={false}
           autoCapitalize="none"
+          accessibilityLabel="Search explore ideas"
         />
       </View>
 
@@ -95,6 +101,41 @@ const ExploreListHeader = memo(function ExploreListHeader({
           </Text>
         </Pressable>
       </View>
+
+      <Text style={[styles.chipSectionLabel, { color: colors.textMuted }]}>Category</Text>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.chipRow}
+        keyboardShouldPersistTaps="handled"
+      >
+        {EXPLORE_CATEGORY_OPTIONS.map((opt) => {
+          const selected = categoryFilter === opt.value;
+          return (
+            <Pressable
+              key={opt.label}
+              onPress={() => onCategory(opt.value)}
+              style={[
+                styles.chip,
+                { borderColor: colors.border },
+                selected && { backgroundColor: colors.inverseBg, borderColor: colors.inverseBg },
+              ]}
+              accessibilityRole="button"
+              accessibilityState={{ selected }}
+              accessibilityLabel={`Filter by ${opt.label}`}
+            >
+              <Text
+                style={[
+                  styles.chipText,
+                  { color: selected ? colors.inverseText : colors.text },
+                ]}
+              >
+                {opt.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
     </View>
   );
 });
@@ -103,6 +144,7 @@ export function ExploreScreen({ navigation }: Props) {
   const colors = useAppColors();
   const [query, setQuery] = useState('');
   const [tab, setTab] = useState<FilterTab>('all');
+  const [categoryFilter, setCategoryFilter] = useState<SwapCategory | null>(null);
   const [savedOrder, setSavedOrder] = useState<string[]>([]);
 
   const reloadSaved = useCallback(async () => {
@@ -127,13 +169,30 @@ export function ExploreScreen({ navigation }: Props) {
         (a, b) => (rank.get(a.id) ?? 999) - (rank.get(b.id) ?? 999)
       );
     }
+    if (categoryFilter !== null) {
+      list = list.filter((p) => p.category === categoryFilter);
+    }
     if (!q) return list;
     return list.filter(
       (p) =>
         p.title.toLowerCase().includes(q) ||
         p.subtitle.toLowerCase().includes(q)
     );
-  }, [query, tab, savedSet, savedOrder]);
+  }, [query, tab, savedSet, savedOrder, categoryFilter]);
+
+  const emptyMessage = useMemo(() => {
+    if (tab === 'saved' && savedOrder.length === 0) {
+      return 'Nothing saved yet — tap the star on any idea to keep it here.';
+    }
+    const q = query.trim();
+    if (categoryFilter !== null && !q) {
+      return 'No ideas in this category. Try “All” or another category chip.';
+    }
+    if (q) {
+      return 'No matches — try a different search or clear the category filter.';
+    }
+    return 'No matches — try a different search.';
+  }, [tab, savedOrder.length, categoryFilter, query]);
 
   const toggleSave = useCallback(
     async (pickId: string) => {
@@ -180,6 +239,8 @@ export function ExploreScreen({ navigation }: Props) {
             <Pressable
               style={[styles.cta, { backgroundColor: colors.inverseBg }]}
               onPress={() => void openExternalUrl(swap.affiliateUrl)}
+              accessibilityRole="button"
+              accessibilityLabel={`Browse affiliate ideas for ${pick.title}`}
             >
               <Text style={[styles.ctaText, { color: colors.inverseText }]}>Browse</Text>
             </Pressable>
@@ -219,6 +280,8 @@ export function ExploreScreen({ navigation }: Props) {
             tab={tab}
             onTab={setTab}
             savedCount={savedOrder.length}
+            categoryFilter={categoryFilter}
+            onCategory={setCategoryFilter}
             colors={colors}
           />
         }
@@ -228,13 +291,9 @@ export function ExploreScreen({ navigation }: Props) {
         keyboardShouldPersistTaps="handled"
         initialNumToRender={12}
         windowSize={7}
-        extraData={{ savedOrder, tab, query }}
+        extraData={{ savedOrder, tab, query, categoryFilter }}
         ListEmptyComponent={
-          <Text style={[styles.empty, { color: colors.textMuted }]}>
-            {tab === 'saved'
-              ? 'Nothing saved yet — tap ☆ on any idea to keep it here.'
-              : 'No matches — try a different search.'}
-          </Text>
+          <Text style={[styles.empty, { color: colors.textMuted }]}>{emptyMessage}</Text>
         }
       />
     </View>
@@ -249,6 +308,15 @@ const styles = StyleSheet.create({
   searchWrap: { borderRadius: 14, borderWidth: 1, paddingHorizontal: 14 },
   searchInput: { paddingVertical: 12, fontSize: 16 },
   tabRow: { flexDirection: 'row', gap: 10 },
+  chipSectionLabel: { fontSize: 12, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 },
+  chipRow: { flexDirection: 'row', gap: 8, paddingVertical: 4 },
+  chip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+  },
+  chipText: { fontSize: 13, fontWeight: '800' },
   tab: {
     flex: 1,
     borderRadius: 12,

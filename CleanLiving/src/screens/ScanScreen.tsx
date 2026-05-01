@@ -11,14 +11,28 @@ import {
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { LabelScanOverlay } from '../components/LabelScanOverlay';
 import { analyzeLabelFromBase64, getMockScanResult } from '../services/analyzeLabel';
 import { withEffectiveAffiliate } from '../services/affiliateLinks';
 import { insertScan } from '../db/scansDb';
-import type { RootStackParamList } from '../navigation/types';
+import type { ScanScreenProps } from '../navigation/types';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Scan'>;
+type Props = ScanScreenProps;
+
+function friendlyScanError(message: string): string {
+  const m = message.toLowerCase();
+  if (m.includes('network') || m.includes('fetch') || m.includes('failed to fetch'))
+    return 'We couldn’t reach the analysis service. Check your connection and try again.';
+  if (m.includes('timeout') || m.includes('timed out'))
+    return 'The analysis took too long. Try again in a moment.';
+  if (m.includes('401') || m.includes('403') || m.includes('unauthorized'))
+    return 'Analysis isn’t authorized. Ask the person who set up the app to check API keys or the proxy.';
+  if (m.includes('500') || m.includes('502') || m.includes('503'))
+    return 'The analysis service had a temporary problem. Try again shortly.';
+  if (m.includes('could not read image') || m.includes('capture failed'))
+    return 'The camera didn’t return a usable photo. Try again with steadier lighting.';
+  return message.length > 160 ? `${message.slice(0, 157)}…` : message;
+}
 
 const ANALYZE_API_URL = process.env.EXPO_PUBLIC_ANALYZE_API_URL;
 const ANALYZE_SECRET = process.env.EXPO_PUBLIC_ANALYZE_SECRET;
@@ -65,7 +79,8 @@ export function ScanScreen({ navigation }: Props) {
         lastBase64Ref.current = null;
         navigation.navigate('Result', { scanId });
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'Something went wrong');
+        const raw = e instanceof Error ? e.message : 'Something went wrong';
+        setError(friendlyScanError(raw));
       } finally {
         setPhase('scan');
       }
@@ -86,10 +101,10 @@ export function ScanScreen({ navigation }: Props) {
       if (photo?.base64) {
         await runAnalyze(photo.base64);
       } else {
-        setError('Could not read image from camera.');
+        setError(friendlyScanError('Could not read image from camera.'));
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Capture failed');
+      setError(friendlyScanError(e instanceof Error ? e.message : 'Capture failed'));
     }
   }, [runAnalyze, scanMode]);
 
@@ -128,7 +143,13 @@ export function ScanScreen({ navigation }: Props) {
   if (!permission.granted) {
     return (
       <SafeAreaView style={styles.permission}>
-        <Pressable style={styles.backPermission} onPress={() => navigation.goBack()} hitSlop={12}>
+        <Pressable
+          style={styles.backPermission}
+          onPress={() => navigation.goBack()}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
           <Text style={styles.backPermissionText}>← Back</Text>
         </Pressable>
         <Text style={styles.permissionTitle}>Camera access</Text>
@@ -165,7 +186,13 @@ export function ScanScreen({ navigation }: Props) {
       <LabelScanOverlay mode={scanMode} />
       <SafeAreaView style={styles.scanChrome} edges={['top']}>
         <View style={styles.topRow}>
-          <Pressable onPress={() => navigation.goBack()} hitSlop={12} style={styles.backCam}>
+          <Pressable
+            onPress={() => navigation.goBack()}
+            hitSlop={12}
+            style={styles.backCam}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
             <Text style={styles.backCamText}>← Back</Text>
           </Pressable>
           {scanMode === 'label' ? (
@@ -173,6 +200,8 @@ export function ScanScreen({ navigation }: Props) {
               onPress={() => setTorchOn((t) => !t)}
               style={styles.torchBtn}
               hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={torchOn ? 'Turn flash off' : 'Turn flash on'}
             >
               <Text style={styles.torchText}>{torchOn ? 'Light on' : 'Light'}</Text>
             </Pressable>
@@ -190,6 +219,9 @@ export function ScanScreen({ navigation }: Props) {
               setTorchOn(false);
               setError(null);
             }}
+            accessibilityRole="button"
+            accessibilityState={{ selected: scanMode === 'label' }}
+            accessibilityLabel="Label scan mode"
           >
             <Text style={[styles.modePillText, scanMode === 'label' && styles.modePillTextActive]}>
               Label
@@ -202,6 +234,9 @@ export function ScanScreen({ navigation }: Props) {
               setTorchOn(false);
               setError(null);
             }}
+            accessibilityRole="button"
+            accessibilityState={{ selected: scanMode === 'barcode' }}
+            accessibilityLabel="Barcode scan mode"
           >
             <Text style={[styles.modePillText, scanMode === 'barcode' && styles.modePillTextActive]}>
               Barcode
@@ -221,14 +256,23 @@ export function ScanScreen({ navigation }: Props) {
         </View>
       ) : null}
       <SafeAreaView style={styles.bottomBar} edges={['bottom']}>
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+        {error ? (
+          <Text style={styles.errorText} accessibilityLiveRegion="polite">
+            {error}
+          </Text>
+        ) : null}
         {error && lastBase64Ref.current ? (
           <Pressable style={styles.retryBtn} onPress={onRetry}>
             <Text style={styles.retryText}>Try again</Text>
           </Pressable>
         ) : null}
         {scanMode === 'label' ? (
-          <Pressable style={styles.captureOuter} onPress={() => void capture()}>
+          <Pressable
+            style={styles.captureOuter}
+            onPress={() => void capture()}
+            accessibilityRole="button"
+            accessibilityLabel="Capture label photo"
+          >
             <View style={styles.captureInner} />
           </Pressable>
         ) : (

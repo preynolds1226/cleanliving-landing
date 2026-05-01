@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, Share, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import type { HormoneInfo, IngredientItem, ScanResult } from '../types';
@@ -19,6 +19,10 @@ function riskBorder(risk: IngredientItem['risk']): string {
   if (risk === 'avoid') return '#EF4444';
   if (risk === 'caution') return '#EAB308';
   return '#22C55E';
+}
+
+function countByRisk(ingredients: IngredientItem[], risk: IngredientItem['risk']): number {
+  return ingredients.filter((i) => i.risk === risk).length;
 }
 
 function PurityGauge({ score, c }: { score: number; c: AppColors }) {
@@ -49,6 +53,16 @@ export function ScanResultPanel({
   const c = useAppColors();
   const dark = useColorScheme() === 'dark';
   const [hormoneDetail, setHormoneDetail] = useState<HormoneInfo | null>(null);
+  const [scoreDetailOpen, setScoreDetailOpen] = useState(false);
+
+  const riskCounts = useMemo(
+    () => ({
+      avoid: countByRisk(result.ingredients, 'avoid'),
+      caution: countByRisk(result.ingredients, 'caution'),
+      ok: countByRisk(result.ingredients, 'ok'),
+    }),
+    [result.ingredients]
+  );
 
   const onCopyIngredients = async () => {
     await Clipboard.setStringAsync(buildIngredientsCopyText(result));
@@ -67,16 +81,40 @@ export function ScanResultPanel({
           <Pressable
             style={[styles.shareBtn, { backgroundColor: c.surface2, borderColor: c.border }]}
             onPress={() => void onCopyIngredients()}
+            accessibilityRole="button"
+            accessibilityLabel="Copy ingredients list"
           >
             <Text style={[styles.shareBtnText, { color: c.text }]}>Copy ingredients</Text>
           </Pressable>
           <Pressable
             style={[styles.shareBtn, { backgroundColor: c.surface2, borderColor: c.border }]}
             onPress={() => void onShare()}
+            accessibilityRole="button"
+            accessibilityLabel="Share scan summary"
           >
             <Text style={[styles.shareBtnText, { color: c.text }]}>Share summary</Text>
           </Pressable>
         </View>
+
+        <Pressable
+          onPress={() => setScoreDetailOpen((v) => !v)}
+          style={[styles.scoreBreakdown, { backgroundColor: c.surface2, borderColor: c.border }]}
+          accessibilityRole="button"
+          accessibilityLabel="Why this score"
+          accessibilityHint="Shows how ingredient flags relate to the purity score"
+        >
+          <Text style={[styles.scoreBreakdownTitle, { color: c.text }]}>Why this score?</Text>
+          <Text style={[styles.scoreBreakdownLine, { color: c.textSecondary }]}>
+            Avoid {riskCounts.avoid} · Caution {riskCounts.caution} · OK {riskCounts.ok}
+            <Text style={{ color: c.textMuted }}> {scoreDetailOpen ? '▼' : '▶'}</Text>
+          </Text>
+          {scoreDetailOpen ? (
+            <Text style={[styles.scoreBreakdownExplain, { color: c.textSecondary }]}>
+              More “avoid” and “caution” ingredients usually lower the 1–100 purity score. The list below
+              shows each ingredient and flag — always verify on the product label.
+            </Text>
+          ) : null}
+        </Pressable>
 
         <PurityGauge score={result.purityScore} c={c} />
 
@@ -235,6 +273,26 @@ const styles = StyleSheet.create({
   },
   gaugeHint: {
     fontSize: 12,
+    marginTop: 4,
+  },
+  scoreBreakdown: {
+    marginTop: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 14,
+    gap: 6,
+  },
+  scoreBreakdownTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  scoreBreakdownLine: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  scoreBreakdownExplain: {
+    fontSize: 13,
+    lineHeight: 18,
     marginTop: 4,
   },
   microCard: {

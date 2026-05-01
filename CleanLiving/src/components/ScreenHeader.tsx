@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../navigation/types';
+import type { NavigationProp, ParamListBase } from '@react-navigation/native';
 import type { AppColors } from '../theme/colors';
 
 export function ScreenHeader({
@@ -11,7 +10,7 @@ export function ScreenHeader({
   right,
 }: {
   title: string;
-  navigation: NativeStackNavigationProp<RootStackParamList, keyof RootStackParamList>;
+  navigation: NavigationProp<ParamListBase>;
   colors: AppColors;
   right?: ReactNode;
 }) {

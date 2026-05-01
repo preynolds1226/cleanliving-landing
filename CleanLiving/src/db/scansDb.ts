@@ -167,19 +167,6 @@ export async function getActivityStats(): Promise<ActivityStats> {
   return { totalScans, weekCount, streakDays };
 }
 
-export async function exportAllScansJson(): Promise<string> {
-  const rows = await listScansDescending();
-  const payload = rows.map((r) => ({
-    id: r.id,
-    createdAt: r.createdAt,
-    purityScore: r.purityScore,
-    productGuess: r.productGuess,
-    isFavorite: r.isFavorite,
-    result: r.result,
-  }));
-  return JSON.stringify(payload, null, 2);
-}
-
 /** Saved Explore picks (affiliate idea shelf), newest first */
 export async function getExploreSavedPickIds(): Promise<string[]> {
   const db = await getDb();
@@ -187,6 +174,34 @@ export async function getExploreSavedPickIds(): Promise<string[]> {
     `SELECT pick_id FROM explore_saved ORDER BY saved_at DESC`
   );
   return rows.map((r) => r.pick_id);
+}
+
+export async function exportAllScansJson(): Promise<string> {
+  const rows = await listScansDescending();
+  const exploreSavedPickIds = await getExploreSavedPickIds();
+  const scans = rows.map((r) => ({
+    id: r.id,
+    createdAt: r.createdAt,
+    purityScore: r.purityScore,
+    productGuess: r.productGuess,
+    isFavorite: r.isFavorite,
+    result: r.result,
+  }));
+  return JSON.stringify(
+    {
+      version: 2,
+      exportedAt: Date.now(),
+      scans,
+      exploreSavedPickIds,
+    },
+    null,
+    2
+  );
+}
+
+export async function clearAllExploreSaved(): Promise<void> {
+  const db = await getDb();
+  await db.execAsync(`DELETE FROM explore_saved`);
 }
 
 export async function saveExplorePick(pickId: string): Promise<void> {

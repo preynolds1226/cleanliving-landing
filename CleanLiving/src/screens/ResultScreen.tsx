@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { CommonActions } from '@react-navigation/native';
 import type { ScanResult } from '../types';
 import { ScanResultPanel } from '../components/ScanResultPanel';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { PrivacyPolicyFooter } from '../components/PrivacyPolicyFooter';
 import { getScanById } from '../db/scansDb';
-import type { RootStackParamList } from '../navigation/types';
+import type { ResultScreenProps } from '../navigation/types';
 import { useAppColors } from '../theme/colors';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Result'>;
+type Props = ResultScreenProps;
 
 function parseResultJson(param: unknown): ScanResult | null {
   if (typeof param !== 'string') return null;
@@ -65,7 +65,17 @@ export function ResultScreen({ navigation, route }: Props) {
   }, [loading, result]);
 
   const onScanAgain = useCallback(() => {
-    navigation.navigate('Scan');
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [
+          {
+            name: 'Tabs',
+            state: { routes: [{ name: 'Scan' }], index: 0 },
+          },
+        ],
+      })
+    );
   }, [navigation]);
 
   if (loading) {
@@ -86,8 +96,13 @@ export function ResultScreen({ navigation, route }: Props) {
       <View style={[styles.centered, { backgroundColor: colors.bg }]}>
         <ScreenHeader title="Result" navigation={navigation} colors={colors} />
         <View style={styles.centerBody}>
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Result not found.</Text>
-          <Pressable style={styles.link} onPress={() => navigation.navigate('History')}>
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+            We couldn’t load this result. It may have been deleted from My Home.
+          </Text>
+          <Pressable
+            style={styles.link}
+            onPress={() => navigation.navigate('Tabs', { screen: 'History' })}
+          >
             <Text style={[styles.linkText, { color: colors.accent }]}>Go to History</Text>
           </Pressable>
           <Pressable style={styles.link} onPress={onScanAgain}>

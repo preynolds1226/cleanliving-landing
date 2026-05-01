@@ -10,10 +10,9 @@ import {
   View,
 } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { PrivacyPolicyFooter } from '../components/PrivacyPolicyFooter';
 import { ScreenHeader } from '../components/ScreenHeader';
-import type { RootStackParamList } from '../navigation/types';
+import type { HistoryScreenProps } from '../navigation/types';
 import {
   deleteScan,
   getHouseScoreAverage,
@@ -25,7 +24,7 @@ import { getEffectiveSwapUrl } from '../services/affiliateLinks';
 import { openExternalUrl } from '../utils/openExternalUrl';
 import { useAppColors } from '../theme/colors';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'History'>;
+type Props = HistoryScreenProps;
 
 function fmtTime(ms: number): string {
   const d = new Date(ms);
@@ -194,8 +193,8 @@ export function HistoryScreen({ navigation }: Props) {
               <Text style={[styles.emptyTitle, { color: colors.text }]}>No scans match</Text>
               <Text style={[styles.emptyBody, { color: colors.textSecondary }]}>
                 {rows.length === 0
-                  ? 'Scan a label to start building your home audit log.'
-                  : 'Try another search or filter.'}
+                  ? 'Nothing saved yet. Use the Scan tab to photograph a label — results land here automatically.'
+                  : 'Nothing matches this search or filter. Clear the search box or show all scans.'}
               </Text>
               {rows.length === 0 ? (
                 <Pressable
@@ -256,6 +255,8 @@ export function HistoryScreen({ navigation }: Props) {
                         style={styles.starBtn}
                         onPress={() => void toggleFavorite(row)}
                         hitSlop={10}
+                        accessibilityRole="button"
+                        accessibilityLabel={row.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
                       >
                         <Text style={styles.star}>{row.isFavorite ? '★' : '☆'}</Text>
                       </Pressable>
