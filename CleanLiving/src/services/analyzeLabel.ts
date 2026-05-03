@@ -113,22 +113,57 @@ export type AnalyzeOptions = {
    * prefer apiUrl so the key stays on the server.
    */
   openAiKey?: string;
+  /** Optional external AbortSignal — e.g. from a screen that navigated away. */
+  signal?: AbortSignal;
 };
+
+const ANALYZE_TIMEOUT_MS = 90_000;
+
+/**
+ * Returns an AbortSignal that fires after ANALYZE_TIMEOUT_MS or when the
+ * optional external signal fires, whichever comes first. Also returns a
+ * cleanup function that must be called to clear the internal timer.
+ */
+function makeTimeoutSignal(external?: AbortSignal): { signal: AbortSignal; cancel: () => void } {
+  const ac = new AbortController();
+  const id = setTimeout(() => {
+    if (!ac.signal.aborted) ac.abort(new Error('Analyze request timed out'));
+  }, ANALYZE_TIMEOUT_MS);
+
+  if (external) {
+    if (external.aborted) {
+      clearTimeout(id);
+      ac.abort(external.reason);
+    } else {
+      external.addEventListener('abort', () => ac.abort(external.reason), { once: true });
+    }
+  }
+
+  return { signal: ac.signal, cancel: () => clearTimeout(id) };
+}
 
 async function analyzeViaProxy(
   base64Jpeg: string,
   apiUrl: string,
-  apiSecret: string | undefined
+  apiSecret: string | undefined,
+  external?: AbortSignal
 ): Promise<ScanResult> {
   const url = apiUrl.trim();
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (apiSecret?.trim()) headers['X-Cleanliving-Secret'] = apiSecret.trim();
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({ imageBase64: base64Jpeg }),
-  });
+  const { signal, cancel } = makeTimeoutSignal(external);
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ imageBase64: base64Jpeg }),
+      signal,
+    });
+  } finally {
+    cancel();
+  }
 
   const text = await res.text();
   let body: unknown;
@@ -146,35 +181,46 @@ async function analyzeViaProxy(
   return normalizeResult(body as Record<string, unknown>);
 }
 
-async function analyzeViaOpenAiDirect(base64Jpeg: string, apiKey: string): Promise<ScanResult> {
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey.trim()}`,
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o',
-      messages: [
-        { role: 'system', content: SYSTEM },
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'text',
-              text: 'Analyze this product label image and return JSON only as specified.',
-            },
-            {
-              type: 'image_url',
-              image_url: { url: `data:image/jpeg;base64,${base64Jpeg}` },
-            },
-          ],
-        },
-      ],
-      response_format: { type: 'json_object' },
-      max_tokens: 2000,
-    }),
-  });
+async function analyzeViaOpenAiDirect(
+  base64Jpeg: string,
+  apiKey: string,
+  external?: AbortSignal
+): Promise<ScanResult> {
+  const { signal, cancel } = makeTimeoutSignal(external);
+  let res: Response;
+  try {
+    res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey.trim()}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        messages: [
+          { role: 'system', content: SYSTEM },
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: 'Analyze this product label image and return JSON only as specified.',
+              },
+              {
+                type: 'image_url',
+                image_url: { url: `data:image/jpeg;base64,${base64Jpeg}` },
+              },
+            ],
+          },
+        ],
+        response_format: { type: 'json_object' },
+        max_tokens: 2000,
+      }),
+      signal,
+    });
+  } finally {
+    cancel();
+  }
 
   if (!res.ok) {
     const errText = await res.text();
@@ -204,14 +250,14 @@ export async function analyzeLabelFromBase64(
   base64Jpeg: string,
   options: AnalyzeOptions = {}
 ): Promise<ScanResult> {
-  const { apiUrl, apiSecret, openAiKey } = options;
+  const { apiUrl, apiSecret, openAiKey, signal } = options;
 
   if (apiUrl?.trim()) {
-    return analyzeViaProxy(base64Jpeg, apiUrl, apiSecret);
+    return analyzeViaProxy(base64Jpeg, apiUrl, apiSecret, signal);
   }
 
   if (openAiKey?.trim()) {
-    return analyzeViaOpenAiDirect(base64Jpeg, openAiKey);
+    return analyzeViaOpenAiDirect(base64Jpeg, openAiKey, signal);
   }
 
   return getMockScanResult();

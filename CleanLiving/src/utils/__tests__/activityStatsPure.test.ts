@@ -17,7 +17,9 @@ describe('activityStatsPure', () => {
 
   it('computeActivityStats aggregates rows', () => {
     const now = Date.now();
-    const stats = computeActivityStats([{ createdAt: now }, { createdAt: now - 86400000 }]);
+    // Use two timestamps within the same hour to avoid week-boundary edge cases
+    // (e.g. running on Sunday, where "yesterday" is the prior week).
+    const stats = computeActivityStats([{ createdAt: now }, { createdAt: now - 3600000 }]);
     expect(stats.totalScans).toBe(2);
     expect(stats.weekCount).toBeGreaterThanOrEqual(2);
   });

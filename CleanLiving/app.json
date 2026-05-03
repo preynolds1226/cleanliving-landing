@@ -30,8 +30,7 @@
         }
       ],
       "expo-sqlite",
-      "expo-web-browser",
-      "@sentry/react-native"
+      "expo-web-browser"
     ],
     "extra": {
       "privacyPolicyUrl": "https://preynolds1226.github.io/cleanliving-landing/privacy.html"

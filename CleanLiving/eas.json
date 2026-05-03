@@ -18,6 +18,9 @@
       }
     },
     "production": {
+      "env": {
+        "EXPO_PUBLIC_OPENAI_API_KEY": ""
+      },
       "ios": {
         "simulator": false
       }

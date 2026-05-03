@@ -7,8 +7,6 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppErrorBoundary } from './src/components/AppErrorBoundary';
 import { initSentry } from './src/instrumentation/sentry';
-
-initSentry();
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
 import { ResultScreen } from './src/screens/ResultScreen';
 import { CompareScreen } from './src/screens/CompareScreen';
@@ -17,6 +15,8 @@ import { MainTabs } from './src/navigation/MainTabs';
 import type { AppStackParamList, RootStackParamList } from './src/navigation/types';
 import { hasCompletedOnboarding } from './src/utils/onboardingStorage';
 import { rootNavigationRef } from './src/navigation/navigationRef';
+
+initSentry();
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 const InnerStack = createNativeStackNavigator<AppStackParamList>();

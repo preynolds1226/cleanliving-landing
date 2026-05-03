@@ -53,16 +53,24 @@ export function ScanScreen({ navigation }: Props) {
   const lastBase64Ref = useRef<string | null>(null);
   const lastBarcodeAt = useRef(0);
   const [pendingFromStorage, setPendingFromStorage] = useState<PendingScanPayload | null>(null);
+  const analyzeAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     void (async () => {
       const p = await getPendingScanBase64();
       if (p) setPendingFromStorage(p);
     })();
+    return () => {
+      analyzeAbortRef.current?.abort();
+    };
   }, []);
 
   const runAnalyze = useCallback(
     async (base64: string | null) => {
+      analyzeAbortRef.current?.abort();
+      const ac = new AbortController();
+      analyzeAbortRef.current = ac;
+
       setPhase('analyzing');
       setError(null);
       if (base64) lastBase64Ref.current = base64;
@@ -72,6 +80,7 @@ export function ScanScreen({ navigation }: Props) {
               apiUrl: ANALYZE_API_URL,
               apiSecret: ANALYZE_SECRET,
               openAiKey: OPENAI_KEY,
+              signal: ac.signal,
             })
           : getMockScanResult();
         const result = withEffectiveAffiliate(raw);
@@ -81,10 +90,12 @@ export function ScanScreen({ navigation }: Props) {
         setPendingFromStorage(null);
         navigation.navigate('Result', { scanId });
       } catch (e) {
+        if (e instanceof Error && e.name === 'AbortError') return;
         const raw = e instanceof Error ? e.message : 'Something went wrong';
         setError(friendlyScanError(raw));
         if (base64) void savePendingScanBase64(base64);
       } finally {
+        analyzeAbortRef.current = null;
         setPhase('scan');
       }
     },

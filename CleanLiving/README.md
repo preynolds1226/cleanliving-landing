@@ -14,6 +14,16 @@ cd CleanLiving
 npm ci
 ```
 
+Copy `.env.example` to `.env` and fill in the values you need for local development.
+
+## Security
+
+`EXPO_PUBLIC_*` variables are **embedded in the compiled app bundle** and can be read by anyone who extracts it. They provide obfuscation and rate-limiting, not confidentiality:
+
+- Keep your OpenAI API key **on the proxy server only** — never set `EXPO_PUBLIC_OPENAI_API_KEY` in preview or production builds. The production EAS profile (`eas.json`) explicitly clears this variable.
+- `EXPO_PUBLIC_ANALYZE_SECRET` is a shared guard that the proxy can check to reject requests from outside the app. It is not a substitute for server-side quotas and auth.
+- Actual secret management belongs in EAS Secrets (for CI/CD) or your server's environment (for the proxy).
+
 Optional: set `EXPO_PUBLIC_SENTRY_DSN` in `.env` (or EAS secrets) so production builds report crashes to Sentry. Without it, the app runs normally and Sentry stays disabled.
 
 ## Scripts

@@ -1,16 +1,14 @@
-import * as Sentry from '@sentry/react-native';
+/**
+ * Sentry stub — @sentry/react-native is not installed.
+ * Re-add the package and configure EXPO_PUBLIC_SENTRY_DSN to enable crash reporting.
+ */
 
-const dsn = process.env.EXPO_PUBLIC_SENTRY_DSN?.trim();
-
-/** Call once at app startup. No-op when DSN is unset (local dev). */
 export function initSentry(): void {
-  if (!dsn) return;
-
-  Sentry.init({
-    dsn,
-    enableAutoSessionTracking: true,
-    debug: __DEV__,
-  });
+  // no-op until Sentry is configured
 }
 
-export { Sentry };
+export const Sentry = {
+  captureException: (_error: unknown, _hint?: unknown): void => {
+    // no-op
+  },
+};
